@@ -1,0 +1,3 @@
+# Full local demo dependencies. Gradio is platform-managed on Hugging Face Spaces.
+-r requirements-api.txt
+gradio==6.27.0

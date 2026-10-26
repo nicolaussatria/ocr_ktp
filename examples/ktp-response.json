@@ -1,0 +1,1350 @@
+{
+  "schema_version": "1.0",
+  "request_id": "9f420db6-098c-4d9e-833e-6cc2dad9fb6e",
+  "document_type": "ktp",
+  "status": "ok",
+  "needs_review": false,
+  "data": {
+    "nik": "9901011508901234",
+    "full_name": "NAMA CONTOH",
+    "birth_place": "CONTOH",
+    "birth_date": "1990-08-15",
+    "gender": "LAKI-LAKI",
+    "blood_type": "O",
+    "address": "JL CONTOH NO 123",
+    "rt": "001",
+    "rw": "002",
+    "village": "DESA CONTOH",
+    "district": "KEC CONTOH",
+    "city": "CONTOH",
+    "province": "CONTOH",
+    "religion": "ISLAM",
+    "marital_status": "KAWIN",
+    "occupation": "KARYAWAN SWASTA",
+    "nationality": "WNI",
+    "valid_until": "SEUMUR HIDUP"
+  },
+  "fields": {
+    "nik": {
+      "value": "9901011508901234",
+      "candidate": "9901011508901234",
+      "status": "accepted",
+      "ocr_score": 0.9999,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "9901011508901234",
+          "ocr_score": 0.9999,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "NIK: 9901011508901234",
+              "score": 0.982,
+              "box": [
+                [
+                  53.0,
+                  164.0
+                ],
+                [
+                  519.0,
+                  164.0
+                ],
+                [
+                  519.0,
+                  202.0
+                ],
+                [
+                  53.0,
+                  202.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "NIK: 9901011508901234",
+              "score": 0.98077,
+              "box": [
+                [
+                  53.0,
+                  164.0
+                ],
+                [
+                  519.0,
+                  164.0
+                ],
+                [
+                  519.0,
+                  202.0
+                ],
+                [
+                  53.0,
+                  202.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "full_name": {
+      "value": "NAMA CONTOH",
+      "candidate": "NAMA CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9886,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "NAMA CONTOH",
+          "ocr_score": 0.9886,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Nama : NAMA CONTOH",
+              "score": 0.98907,
+              "box": [
+                [
+                  52.0,
+                  229.0
+                ],
+                [
+                  476.0,
+                  227.0
+                ],
+                [
+                  476.0,
+                  266.0
+                ],
+                [
+                  52.0,
+                  268.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Nama : NAMA CONTOH",
+              "score": 0.9895,
+              "box": [
+                [
+                  52.0,
+                  229.0
+                ],
+                [
+                  476.0,
+                  227.0
+                ],
+                [
+                  476.0,
+                  266.0
+                ],
+                [
+                  52.0,
+                  268.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "birth_place": {
+      "value": "CONTOH",
+      "candidate": "CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9954,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "CONTOH",
+          "ocr_score": 0.9954,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Tempat/Tgl Lahir : CONTOH, 15-08-1990",
+              "score": 0.99391,
+              "box": [
+                [
+                  52.0,
+                  294.0
+                ],
+                [
+                  782.0,
+                  292.0
+                ],
+                [
+                  782.0,
+                  335.0
+                ],
+                [
+                  52.0,
+                  337.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Tempat/Tgl Lahir : CONTOH, 15-08-1990",
+              "score": 0.99399,
+              "box": [
+                [
+                  52.0,
+                  294.0
+                ],
+                [
+                  782.0,
+                  292.0
+                ],
+                [
+                  782.0,
+                  335.0
+                ],
+                [
+                  52.0,
+                  337.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "birth_date": {
+      "value": "1990-08-15",
+      "candidate": "1990-08-15",
+      "status": "accepted",
+      "ocr_score": 0.9954,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "1990-08-15",
+          "ocr_score": 0.9954,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Tempat/Tgl Lahir : CONTOH, 15-08-1990",
+              "score": 0.99391,
+              "box": [
+                [
+                  52.0,
+                  294.0
+                ],
+                [
+                  782.0,
+                  292.0
+                ],
+                [
+                  782.0,
+                  335.0
+                ],
+                [
+                  52.0,
+                  337.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Tempat/Tgl Lahir : CONTOH, 15-08-1990",
+              "score": 0.99399,
+              "box": [
+                [
+                  52.0,
+                  294.0
+                ],
+                [
+                  782.0,
+                  292.0
+                ],
+                [
+                  782.0,
+                  335.0
+                ],
+                [
+                  52.0,
+                  337.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "gender": {
+      "value": "LAKI-LAKI",
+      "candidate": "LAKI-LAKI",
+      "status": "accepted",
+      "ocr_score": 0.9968,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "LAKI-LAKI",
+          "ocr_score": 0.9968,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Jenis Kelamin : LAKI-LAKI",
+              "score": 0.96314,
+              "box": [
+                [
+                  48.0,
+                  359.0
+                ],
+                [
+                  505.0,
+                  357.0
+                ],
+                [
+                  505.0,
+                  399.0
+                ],
+                [
+                  48.0,
+                  401.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Jenis Kelamin : LAKI-LAKI",
+              "score": 0.96324,
+              "box": [
+                [
+                  48.0,
+                  359.0
+                ],
+                [
+                  505.0,
+                  357.0
+                ],
+                [
+                  505.0,
+                  399.0
+                ],
+                [
+                  48.0,
+                  401.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "blood_type": {
+      "value": "O",
+      "candidate": "O",
+      "status": "accepted",
+      "ocr_score": 0.9932,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "O",
+          "ocr_score": 0.9932,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Gol. Darah : O",
+              "score": 0.94844,
+              "box": [
+                [
+                  52.0,
+                  423.0
+                ],
+                [
+                  312.0,
+                  423.0
+                ],
+                [
+                  312.0,
+                  463.0
+                ],
+                [
+                  52.0,
+                  463.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Gol. Darah : O",
+              "score": 0.94816,
+              "box": [
+                [
+                  52.0,
+                  423.0
+                ],
+                [
+                  312.0,
+                  423.0
+                ],
+                [
+                  312.0,
+                  463.0
+                ],
+                [
+                  52.0,
+                  463.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "address": {
+      "value": "JL CONTOH NO 123",
+      "candidate": "JL CONTOH NO 123",
+      "status": "accepted",
+      "ocr_score": 0.9912,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "JL CONTOH NO 123",
+          "ocr_score": 0.9912,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Alamat : JL CONTOH NO 123",
+              "score": 0.98645,
+              "box": [
+                [
+                  53.0,
+                  489.0
+                ],
+                [
+                  566.0,
+                  489.0
+                ],
+                [
+                  566.0,
+                  529.0
+                ],
+                [
+                  53.0,
+                  529.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Alamat : JL CONTOH NO 123",
+              "score": 0.992,
+              "box": [
+                [
+                  53.0,
+                  489.0
+                ],
+                [
+                  566.0,
+                  489.0
+                ],
+                [
+                  566.0,
+                  529.0
+                ],
+                [
+                  53.0,
+                  529.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "rt": {
+      "value": "001",
+      "candidate": "001",
+      "status": "accepted",
+      "ocr_score": 1.0,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "001",
+          "ocr_score": 1.0,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "RT/RW : 001/002",
+              "score": 0.96785,
+              "box": [
+                [
+                  54.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  593.0
+                ],
+                [
+                  54.0,
+                  593.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "RT/RW : 001/002",
+              "score": 0.96767,
+              "box": [
+                [
+                  54.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  593.0
+                ],
+                [
+                  54.0,
+                  593.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "rw": {
+      "value": "002",
+      "candidate": "002",
+      "status": "accepted",
+      "ocr_score": 1.0,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "002",
+          "ocr_score": 1.0,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "RT/RW : 001/002",
+              "score": 0.96785,
+              "box": [
+                [
+                  54.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  593.0
+                ],
+                [
+                  54.0,
+                  593.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "RT/RW : 001/002",
+              "score": 0.96767,
+              "box": [
+                [
+                  54.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  554.0
+                ],
+                [
+                  356.0,
+                  593.0
+                ],
+                [
+                  54.0,
+                  593.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "village": {
+      "value": "DESA CONTOH",
+      "candidate": "DESA CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9982,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "DESA CONTOH",
+          "ocr_score": 0.9982,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Kel/Desa : DESA CONTOH",
+              "score": 0.99604,
+              "box": [
+                [
+                  53.0,
+                  619.0
+                ],
+                [
+                  518.0,
+                  617.0
+                ],
+                [
+                  518.0,
+                  656.0
+                ],
+                [
+                  53.0,
+                  658.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Kel/Desa : DESA CONTOH",
+              "score": 0.99605,
+              "box": [
+                [
+                  53.0,
+                  619.0
+                ],
+                [
+                  518.0,
+                  617.0
+                ],
+                [
+                  518.0,
+                  656.0
+                ],
+                [
+                  53.0,
+                  658.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "district": {
+      "value": "KEC CONTOH",
+      "candidate": "KEC CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9999,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "KEC CONTOH",
+          "ocr_score": 0.9999,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Kecamatan: KEC CONTOH",
+              "score": 0.99369,
+              "box": [
+                [
+                  53.0,
+                  684.0
+                ],
+                [
+                  535.0,
+                  684.0
+                ],
+                [
+                  535.0,
+                  722.0
+                ],
+                [
+                  53.0,
+                  722.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Kecamatan : KEC CONTOH",
+              "score": 0.99374,
+              "box": [
+                [
+                  53.0,
+                  684.0
+                ],
+                [
+                  535.0,
+                  684.0
+                ],
+                [
+                  535.0,
+                  722.0
+                ],
+                [
+                  53.0,
+                  722.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "city": {
+      "value": "CONTOH",
+      "candidate": "CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9997,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "CONTOH",
+          "ocr_score": 0.9997,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "KOTA CONTOH",
+              "score": 0.97279,
+              "box": [
+                [
+                  54.0,
+                  100.0
+                ],
+                [
+                  320.0,
+                  100.0
+                ],
+                [
+                  320.0,
+                  136.0
+                ],
+                [
+                  54.0,
+                  136.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "KOTA CONTOH",
+              "score": 0.97323,
+              "box": [
+                [
+                  54.0,
+                  100.0
+                ],
+                [
+                  320.0,
+                  100.0
+                ],
+                [
+                  320.0,
+                  136.0
+                ],
+                [
+                  54.0,
+                  136.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "province": {
+      "value": "CONTOH",
+      "candidate": "CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9997,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "CONTOH",
+          "ocr_score": 0.9997,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "PROVINSI CONTOH",
+              "score": 0.99724,
+              "box": [
+                [
+                  55.0,
+                  35.0
+                ],
+                [
+                  395.0,
+                  35.0
+                ],
+                [
+                  395.0,
+                  71.0
+                ],
+                [
+                  55.0,
+                  71.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "PROVINSI CONTOH",
+              "score": 0.99723,
+              "box": [
+                [
+                  55.0,
+                  35.0
+                ],
+                [
+                  395.0,
+                  35.0
+                ],
+                [
+                  395.0,
+                  71.0
+                ],
+                [
+                  55.0,
+                  71.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "religion": {
+      "value": "ISLAM",
+      "candidate": "ISLAM",
+      "status": "accepted",
+      "ocr_score": 0.9996,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "ISLAM",
+          "ocr_score": 0.9996,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Agama : ISLAM",
+              "score": 0.97584,
+              "box": [
+                [
+                  52.0,
+                  749.0
+                ],
+                [
+                  331.0,
+                  749.0
+                ],
+                [
+                  331.0,
+                  791.0
+                ],
+                [
+                  52.0,
+                  791.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Agama : ISLAM",
+              "score": 0.97554,
+              "box": [
+                [
+                  52.0,
+                  749.0
+                ],
+                [
+                  331.0,
+                  749.0
+                ],
+                [
+                  331.0,
+                  791.0
+                ],
+                [
+                  52.0,
+                  791.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "marital_status": {
+      "value": "KAWIN",
+      "candidate": "KAWIN",
+      "status": "accepted",
+      "ocr_score": 0.9996,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "KAWIN",
+          "ocr_score": 0.9996,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Status Perkawinan: KAWIN",
+              "score": 0.99776,
+              "box": [
+                [
+                  52.0,
+                  814.0
+                ],
+                [
+                  544.0,
+                  814.0
+                ],
+                [
+                  544.0,
+                  853.0
+                ],
+                [
+                  52.0,
+                  853.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Status Perkawinan : KAWIN",
+              "score": 0.99766,
+              "box": [
+                [
+                  52.0,
+                  814.0
+                ],
+                [
+                  544.0,
+                  814.0
+                ],
+                [
+                  544.0,
+                  853.0
+                ],
+                [
+                  52.0,
+                  853.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "occupation": {
+      "value": "KARYAWAN SWASTA",
+      "candidate": "KARYAWAN SWASTA",
+      "status": "accepted",
+      "ocr_score": 0.999,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "KARYAWAN SWASTA",
+          "ocr_score": 0.999,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Pekerjaan: KARYAWAN SWASTA",
+              "score": 0.99714,
+              "box": [
+                [
+                  53.0,
+                  878.0
+                ],
+                [
+                  625.0,
+                  878.0
+                ],
+                [
+                  625.0,
+                  921.0
+                ],
+                [
+                  53.0,
+                  921.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Pekerjaan : KARYAWAN SWASTA",
+              "score": 0.99415,
+              "box": [
+                [
+                  52.0,
+                  878.0
+                ],
+                [
+                  625.0,
+                  875.0
+                ],
+                [
+                  625.0,
+                  918.0
+                ],
+                [
+                  52.0,
+                  921.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "nationality": {
+      "value": "WNI",
+      "candidate": "WNI",
+      "status": "accepted",
+      "ocr_score": 0.9995,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "WNI",
+          "ocr_score": 0.9995,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Kewarganegaraan: WNI",
+              "score": 0.98781,
+              "box": [
+                [
+                  50.0,
+                  940.0
+                ],
+                [
+                  495.0,
+                  937.0
+                ],
+                [
+                  495.0,
+                  987.0
+                ],
+                [
+                  50.0,
+                  989.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Kewarganegaraan : WNI",
+              "score": 0.98789,
+              "box": [
+                [
+                  50.0,
+                  940.0
+                ],
+                [
+                  495.0,
+                  937.0
+                ],
+                [
+                  495.0,
+                  987.0
+                ],
+                [
+                  50.0,
+                  989.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    },
+    "valid_until": {
+      "value": "SEUMUR HIDUP",
+      "candidate": "SEUMUR HIDUP",
+      "status": "accepted",
+      "ocr_score": 0.9985,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "SEUMUR HIDUP",
+          "ocr_score": 0.9985,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Berlaku Hingga : SEUMUR HIDUP",
+              "score": 0.99732,
+              "box": [
+                [
+                  53.0,
+                  1008.0
+                ],
+                [
+                  647.0,
+                  1008.0
+                ],
+                [
+                  647.0,
+                  1050.0
+                ],
+                [
+                  53.0,
+                  1050.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Berlaku Hingga : SEUMUR HIDUP",
+              "score": 0.99717,
+              "box": [
+                [
+                  53.0,
+                  1008.0
+                ],
+                [
+                  647.0,
+                  1008.0
+                ],
+                [
+                  647.0,
+                  1050.0
+                ],
+                [
+                  53.0,
+                  1050.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": null
+        }
+      ],
+      "assignment": null,
+      "phone_type": null
+    }
+  },
+  "review_reasons": [],
+  "quality": {
+    "width": 1600,
+    "height": 1200,
+    "sharpness": 2060.79,
+    "contrast": 37.32,
+    "warnings": [],
+    "text_height_px": 39.0
+  },
+  "processing": {
+    "mode": "accurate",
+    "elapsed_ms": 2856.7,
+    "engine": "RapidOCR 3.9.2 / ONNX Runtime 1.30.0",
+    "models": {
+      "det": "PP-OCRv6_det_small.onnx",
+      "rec": "PP-OCRv6_rec_small.onnx",
+      "cls": "ch_ppocr_mobile_v2.0_cls_mobile.onnx"
+    },
+    "model_hashes": {
+      "det": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f",
+      "rec": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884",
+      "cls": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    },
+    "passes": [
+      {
+        "id": "p1",
+        "rotation_clockwise": 0,
+        "enhancement": "original",
+        "width": 1600,
+        "height": 1200,
+        "ocr_ms": 1247.5,
+        "to_input": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      {
+        "id": "p2",
+        "rotation_clockwise": 0,
+        "enhancement": "clahe",
+        "width": 1600,
+        "height": 1200,
+        "ocr_ms": 1139.42,
+        "to_input": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      }
+    ],
+    "phone_region": null
+  },
+  "raw_ocr": null,
+  "verification": "ocr_only_not_identity_verification"
+}

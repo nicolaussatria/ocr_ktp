@@ -1,0 +1,14 @@
+# Pin the OCR wrapper and runtime together. Models ship inside rapidocr's wheel.
+rapidocr==3.9.2
+onnxruntime==1.30.0
+# See requirements.txt: avoid opencv-python 5.0 KleidiCV resize faults on macOS arm64.
+opencv-python==4.11.0.86
+numpy==2.5.3
+Pillow==12.3.0
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
+pydantic==2.13.5
+pydantic-settings==2.15.0
+phonenumbers==9.0.39
+email-validator==2.3.0

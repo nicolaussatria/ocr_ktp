@@ -1,0 +1,725 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Card OCR API",
+    "description": "Upload one KTP or business card. Accepted values and review candidates are separated.",
+    "version": "1.8.0"
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Health",
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ocr/{document_type}": {
+      "post": {
+        "tags": [
+          "ocr"
+        ],
+        "summary": "Recognize",
+        "operationId": "recognize_v1_ocr__document_type__post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ktp",
+                "business_card",
+                "auto"
+              ],
+              "type": "string",
+              "title": "Document Type"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_recognize_v1_ocr__document_type__post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OCRResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_recognize_v1_ocr__document_type__post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "One JPEG, PNG, or WebP image"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "fast",
+              "accurate"
+            ],
+            "title": "Mode",
+            "default": "accurate"
+          },
+          "include_raw": {
+            "type": "boolean",
+            "title": "Include Raw",
+            "default": false
+          },
+          "rotation": {
+            "type": "integer",
+            "title": "Rotation",
+            "default": 0
+          },
+          "phone_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Region",
+            "description": "Phone country for national numbers, e.g. ID or US"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_recognize_v1_ocr__document_type__post"
+      },
+      "Candidate": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "ocr_score": {
+            "type": "number",
+            "title": "Ocr Score"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "supporting_passes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supporting Passes"
+          },
+          "assignment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "ocr_score"
+        ],
+        "title": "Candidate"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "Evidence": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "box": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Box"
+          },
+          "pass_id": {
+            "type": "string",
+            "title": "Pass Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "score",
+          "box",
+          "pass_id"
+        ],
+        "title": "Evidence"
+      },
+      "FieldResult": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "candidate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "review",
+              "missing"
+            ],
+            "title": "Status",
+            "default": "missing"
+          },
+          "ocr_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Score"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "assignment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment"
+          },
+          "phone_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "mobile",
+                  "landline",
+                  "fax"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Type"
+          }
+        },
+        "type": "object",
+        "title": "FieldResult"
+      },
+      "OCRResponse": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "document_type": {
+            "type": "string",
+            "enum": [
+              "ktp",
+              "business_card"
+            ],
+            "title": "Document Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "needs_review"
+            ],
+            "title": "Status"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review"
+          },
+          "data": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Data"
+          },
+          "fields": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FieldResult"
+                },
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/FieldResult"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Fields"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Review Reasons"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          },
+          "processing": {
+            "$ref": "#/components/schemas/Processing"
+          },
+          "raw_ocr": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Span"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Ocr"
+          },
+          "verification": {
+            "type": "string",
+            "const": "ocr_only_not_identity_verification",
+            "title": "Verification",
+            "default": "ocr_only_not_identity_verification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "document_type",
+          "status",
+          "needs_review",
+          "data",
+          "fields",
+          "review_reasons",
+          "quality",
+          "processing"
+        ],
+        "title": "OCRResponse"
+      },
+      "PassInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "rotation_clockwise": {
+            "type": "integer",
+            "title": "Rotation Clockwise"
+          },
+          "enhancement": {
+            "type": "string",
+            "title": "Enhancement"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "ocr_ms": {
+            "type": "number",
+            "title": "Ocr Ms"
+          },
+          "to_input": {
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "rotation_clockwise",
+          "enhancement",
+          "width",
+          "height",
+          "ocr_ms"
+        ],
+        "title": "PassInfo"
+      },
+      "Processing": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "fast",
+              "accurate"
+            ],
+            "title": "Mode"
+          },
+          "elapsed_ms": {
+            "type": "number",
+            "title": "Elapsed Ms"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "models": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Models"
+          },
+          "model_hashes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Model Hashes"
+          },
+          "passes": {
+            "items": {
+              "$ref": "#/components/schemas/PassInfo"
+            },
+            "type": "array",
+            "title": "Passes"
+          },
+          "phone_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Region"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "elapsed_ms",
+          "engine",
+          "models",
+          "passes"
+        ],
+        "title": "Processing"
+      },
+      "Quality": {
+        "properties": {
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "sharpness": {
+            "type": "number",
+            "title": "Sharpness"
+          },
+          "contrast": {
+            "type": "number",
+            "title": "Contrast"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "text_height_px": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Height Px"
+          }
+        },
+        "type": "object",
+        "required": [
+          "width",
+          "height",
+          "sharpness",
+          "contrast"
+        ],
+        "title": "Quality"
+      },
+      "Span": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "box": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Box"
+          },
+          "pass_id": {
+            "type": "string",
+            "title": "Pass Id",
+            "default": "original"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "score",
+          "box"
+        ],
+        "title": "Span"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

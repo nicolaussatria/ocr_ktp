@@ -1,0 +1,38 @@
+CARD OCR - LOCAL AND GRADIO EDITION (v1.8)
+
+This ZIP contains setup_local.py and run_local.py at its top level.
+Extract the whole ZIP into one folder; keep card_ocr/, examples/ and the other
+folders alongside those scripts.
+
+Use 64-bit Python 3.12. Python 3.14 is not supported by this release.
+
+On macOS, open Terminal in the extracted folder and run:
+
+    python3.12 setup_local.py
+    python3.12 run_local.py
+
+On Windows, open PowerShell in the extracted folder and run:
+
+    py -3.12 setup_local.py
+    py -3.12 run_local.py
+
+Open http://127.0.0.1:7860 for the upload screen.
+Open http://127.0.0.1:7860/docs for the JSON REST API.
+
+If python3.12 is not found, install Python 3.12 before running setup.
+No Docker is needed. See docs/LOCAL_TESTING.md for troubleshooting and
+README.md for API details. See docs/DEPLOYMENT.md for Gradio sharing and
+Hugging Face hosting instructions.
+
+BUSINESS CARD AND KTP TUNING UPDATE
+Select Accurate. For foreign national phone numbers, open Image and output options
+and enter the correct phone country (for example US). REST uses phone_region=US.
+e-KTP photos keep their NIK and address when the colons are printed in a column.
+A card photographed on a desk is found and flattened before reading (option
+OCR_CARD_DETECTION). Tilted photographs are re-read from a levelled view, and small
+print is retried for both KTP and business cards (OCR_DESKEW_RETRY,
+OCR_SMALL_TEXT_RETRY). Check docs/TUNING.md for the measured changes.
+New in v1.7: a business card can be photographed as it is, held in a hand or lying
+among other things, also sideways. The card is found and flattened before it is read
+(part of OCR_CARD_DETECTION). Send one card per photograph. See docs/BUSINESS_CARDS.md.
+Stop your old server before starting this version. /healthz should show 1.8.0.

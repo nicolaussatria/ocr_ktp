@@ -1,0 +1,18 @@
+# Hugging Face Spaces installs the Gradio version from README.md.
+# Keep this file self-contained: Spaces mounts it independently during builds.
+rapidocr==3.9.2
+onnxruntime==1.30.0
+# opencv-python 5.0.x ships the KleidiCV NEON HAL on Apple Silicon; its resize kernel
+# segfaults the process on repeated large-frame recognition (reproduced with rapidocr
+# 3.9.2 on macOS arm64). 4.11 is the newest line without KleidiCV that still accepts
+# the pinned numpy. Revisit when the upstream HAL fault is fixed.
+opencv-python==4.11.0.86
+numpy==2.5.3
+Pillow==12.3.0
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
+pydantic>=2.11.10,<2.13
+pydantic-settings==2.15.0
+phonenumbers==9.0.39
+email-validator==2.3.0

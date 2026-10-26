@@ -1,0 +1,610 @@
+{
+  "schema_version": "1.0",
+  "request_id": "cd408cea-478d-4103-ba33-6b1e1c39727b",
+  "document_type": "business_card",
+  "status": "ok",
+  "needs_review": false,
+  "data": {
+    "full_name": "NAMA CONTOH",
+    "company": "PT CONTOH TEKNOLOGI",
+    "company_alias": null,
+    "job_title": "Sales Manager",
+    "address": "Jl. Contoh No. 123, Jakarta",
+    "emails": [
+      "info@example.com"
+    ],
+    "phones": [
+      "+6281234567890"
+    ],
+    "websites": [
+      "https://www.example.com"
+    ],
+    "social_handles": [],
+    "mobile_phones": [
+      "+6281234567890"
+    ]
+  },
+  "fields": {
+    "full_name": {
+      "value": "NAMA CONTOH",
+      "candidate": "NAMA CONTOH",
+      "status": "accepted",
+      "ocr_score": 0.9998,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "NAMA CONTOH",
+          "ocr_score": 0.9998,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "NAMA CONTOH",
+              "score": 0.99889,
+              "box": [
+                [
+                  54.0,
+                  99.0
+                ],
+                [
+                  333.0,
+                  99.0
+                ],
+                [
+                  333.0,
+                  137.0
+                ],
+                [
+                  54.0,
+                  137.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "NAMA CONTOH",
+              "score": 0.99886,
+              "box": [
+                [
+                  54.0,
+                  99.0
+                ],
+                [
+                  333.0,
+                  99.0
+                ],
+                [
+                  333.0,
+                  137.0
+                ],
+                [
+                  54.0,
+                  137.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": "layout"
+        }
+      ],
+      "assignment": "layout",
+      "phone_type": null
+    },
+    "company": {
+      "value": "PT CONTOH TEKNOLOGI",
+      "candidate": "PT CONTOH TEKNOLOGI",
+      "status": "accepted",
+      "ocr_score": 0.9999,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "PT CONTOH TEKNOLOGI",
+          "ocr_score": 0.9999,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "PT CONTOH TEKNOLOGI",
+              "score": 0.9892,
+              "box": [
+                [
+                  53.0,
+                  32.0
+                ],
+                [
+                  491.0,
+                  32.0
+                ],
+                [
+                  491.0,
+                  72.0
+                ],
+                [
+                  53.0,
+                  72.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "PT CONTOH TEKNOLOGI",
+              "score": 0.98908,
+              "box": [
+                [
+                  53.0,
+                  32.0
+                ],
+                [
+                  491.0,
+                  32.0
+                ],
+                [
+                  491.0,
+                  72.0
+                ],
+                [
+                  53.0,
+                  72.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p2",
+            "p1"
+          ],
+          "assignment": "pattern"
+        }
+      ],
+      "assignment": "pattern",
+      "phone_type": null
+    },
+    "company_alias": {
+      "value": null,
+      "candidate": null,
+      "status": "missing",
+      "ocr_score": null,
+      "reasons": [
+        "not_found"
+      ],
+      "candidates": [],
+      "assignment": null,
+      "phone_type": null
+    },
+    "job_title": {
+      "value": "Sales Manager",
+      "candidate": "Sales Manager",
+      "status": "accepted",
+      "ocr_score": 0.9999,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "Sales Manager",
+          "ocr_score": 0.9999,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "Sales Manager",
+              "score": 0.99149,
+              "box": [
+                [
+                  51.0,
+                  163.0
+                ],
+                [
+                  325.0,
+                  163.0
+                ],
+                [
+                  325.0,
+                  206.0
+                ],
+                [
+                  51.0,
+                  206.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "Sales Manager",
+              "score": 0.99084,
+              "box": [
+                [
+                  51.0,
+                  163.0
+                ],
+                [
+                  325.0,
+                  163.0
+                ],
+                [
+                  325.0,
+                  206.0
+                ],
+                [
+                  51.0,
+                  206.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": "pattern"
+        }
+      ],
+      "assignment": "pattern",
+      "phone_type": null
+    },
+    "address": {
+      "value": "Jl. Contoh No. 123, Jakarta",
+      "candidate": "Jl. Contoh No. 123, Jakarta",
+      "status": "accepted",
+      "ocr_score": 0.9945,
+      "reasons": [],
+      "candidates": [
+        {
+          "value": "Jl. Contoh No. 123, Jakarta",
+          "ocr_score": 0.9945,
+          "issues": [],
+          "evidence": [
+            {
+              "text": "JI. Contoh No. 123, Jakarta",
+              "score": 0.99494,
+              "box": [
+                [
+                  49.0,
+                  423.0
+                ],
+                [
+                  530.0,
+                  423.0
+                ],
+                [
+                  530.0,
+                  466.0
+                ],
+                [
+                  49.0,
+                  466.0
+                ]
+              ],
+              "pass_id": "p1"
+            },
+            {
+              "text": "JI. Contoh No. 123, Jakarta",
+              "score": 0.99458,
+              "box": [
+                [
+                  49.0,
+                  423.0
+                ],
+                [
+                  530.0,
+                  423.0
+                ],
+                [
+                  530.0,
+                  466.0
+                ],
+                [
+                  49.0,
+                  466.0
+                ]
+              ],
+              "pass_id": "p2"
+            }
+          ],
+          "supporting_passes": [
+            "p1",
+            "p2"
+          ],
+          "assignment": "pattern"
+        }
+      ],
+      "assignment": "pattern",
+      "phone_type": null
+    },
+    "emails": [
+      {
+        "value": "info@example.com",
+        "candidate": "info@example.com",
+        "status": "accepted",
+        "ocr_score": 1.0,
+        "reasons": [],
+        "candidates": [
+          {
+            "value": "info@example.com",
+            "ocr_score": 1.0,
+            "issues": [],
+            "evidence": [
+              {
+                "text": "info@example.com",
+                "score": 0.99998,
+                "box": [
+                  [
+                    52.0,
+                    225.0
+                  ],
+                  [
+                    405.0,
+                    228.0
+                  ],
+                  [
+                    405.0,
+                    271.0
+                  ],
+                  [
+                    52.0,
+                    269.0
+                  ]
+                ],
+                "pass_id": "p1"
+              },
+              {
+                "text": "info@example.com",
+                "score": 0.99998,
+                "box": [
+                  [
+                    52.0,
+                    225.0
+                  ],
+                  [
+                    405.0,
+                    228.0
+                  ],
+                  [
+                    405.0,
+                    271.0
+                  ],
+                  [
+                    52.0,
+                    269.0
+                  ]
+                ],
+                "pass_id": "p2"
+              }
+            ],
+            "supporting_passes": [
+              "p1",
+              "p2"
+            ],
+            "assignment": "pattern"
+          }
+        ],
+        "assignment": "pattern",
+        "phone_type": null
+      }
+    ],
+    "phones": [
+      {
+        "value": "+6281234567890",
+        "candidate": "+6281234567890",
+        "status": "accepted",
+        "ocr_score": 0.9999,
+        "reasons": [],
+        "candidates": [
+          {
+            "value": "+6281234567890",
+            "ocr_score": 0.9999,
+            "issues": [],
+            "evidence": [
+              {
+                "text": "+62 812 3456 7890",
+                "score": 0.99185,
+                "box": [
+                  [
+                    56.0,
+                    294.0
+                  ],
+                  [
+                    417.0,
+                    294.0
+                  ],
+                  [
+                    417.0,
+                    332.0
+                  ],
+                  [
+                    56.0,
+                    332.0
+                  ]
+                ],
+                "pass_id": "p1"
+              },
+              {
+                "text": "+62 812 3456 7890",
+                "score": 0.99162,
+                "box": [
+                  [
+                    56.0,
+                    294.0
+                  ],
+                  [
+                    417.0,
+                    294.0
+                  ],
+                  [
+                    417.0,
+                    332.0
+                  ],
+                  [
+                    56.0,
+                    332.0
+                  ]
+                ],
+                "pass_id": "p2"
+              }
+            ],
+            "supporting_passes": [
+              "p1",
+              "p2"
+            ],
+            "assignment": "pattern"
+          }
+        ],
+        "assignment": "pattern",
+        "phone_type": "mobile"
+      }
+    ],
+    "websites": [
+      {
+        "value": "https://www.example.com",
+        "candidate": "https://www.example.com",
+        "status": "accepted",
+        "ocr_score": 1.0,
+        "reasons": [],
+        "candidates": [
+          {
+            "value": "https://www.example.com",
+            "ocr_score": 1.0,
+            "issues": [],
+            "evidence": [
+              {
+                "text": "www.example.com",
+                "score": 0.99998,
+                "box": [
+                  [
+                    50.0,
+                    356.0
+                  ],
+                  [
+                    398.0,
+                    358.0
+                  ],
+                  [
+                    398.0,
+                    402.0
+                  ],
+                  [
+                    50.0,
+                    399.0
+                  ]
+                ],
+                "pass_id": "p1"
+              },
+              {
+                "text": "www.example.com",
+                "score": 0.99998,
+                "box": [
+                  [
+                    50.0,
+                    356.0
+                  ],
+                  [
+                    398.0,
+                    358.0
+                  ],
+                  [
+                    398.0,
+                    402.0
+                  ],
+                  [
+                    50.0,
+                    399.0
+                  ]
+                ],
+                "pass_id": "p2"
+              }
+            ],
+            "supporting_passes": [
+              "p2",
+              "p1"
+            ],
+            "assignment": "pattern"
+          }
+        ],
+        "assignment": "pattern",
+        "phone_type": null
+      }
+    ],
+    "social_handles": []
+  },
+  "review_reasons": [],
+  "quality": {
+    "width": 1600,
+    "height": 615,
+    "sharpness": 1493.99,
+    "contrast": 31.81,
+    "warnings": [],
+    "text_height_px": 41.5
+  },
+  "processing": {
+    "mode": "accurate",
+    "elapsed_ms": 1580.79,
+    "engine": "RapidOCR 3.9.2 / ONNX Runtime 1.30.0",
+    "models": {
+      "det": "PP-OCRv6_det_small.onnx",
+      "rec": "PP-OCRv6_rec_small.onnx",
+      "cls": "ch_ppocr_mobile_v2.0_cls_mobile.onnx"
+    },
+    "model_hashes": {
+      "det": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f",
+      "rec": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884",
+      "cls": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    },
+    "passes": [
+      {
+        "id": "p1",
+        "rotation_clockwise": 0,
+        "enhancement": "original",
+        "width": 1600,
+        "height": 615,
+        "ocr_ms": 653.58,
+        "to_input": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      {
+        "id": "p2",
+        "rotation_clockwise": 0,
+        "enhancement": "clahe",
+        "width": 1600,
+        "height": 615,
+        "ocr_ms": 597.92,
+        "to_input": [
+          [
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      }
+    ],
+    "phone_region": "ID"
+  },
+  "raw_ocr": null,
+  "verification": "ocr_only_not_identity_verification"
+}
