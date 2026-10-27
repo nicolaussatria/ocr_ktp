@@ -231,43 +231,43 @@ def test_a_box_between_two_rows_does_not_merge_them():
 
 def test_a_misread_birth_label_is_still_recognised_by_lahir():
     for label in ("TempaV T gI Lahir", "Tempat T gi Lahir"):
-        spans = [box(label, 20, 240, 200, 33), box("SAMARINDA, 08-10-1991", 221, 242, 520, 30),
-                 box("Nama", 22, 200, 80, 29), box("HARIYANTO OKNES", 230, 200, 480, 27)]
+        spans = [box(label, 20, 240, 200, 33), box("SAMARINDA, 21-03-1985", 221, 242, 520, 30),
+                 box("Nama", 22, 200, 80, 29), box("BUDI SANTOSO", 230, 200, 480, 27)]
         fields = values(spans)
         assert fields["birth_place"] == ["SAMARINDA"], label
-        assert fields["birth_date"] == ["1991-10-08"], label
+        assert fields["birth_date"] == ["1985-03-21"], label
 
 
 def test_a_single_strong_read_outranks_two_weak_ones():
-    strong = read("BLOK A-1/NO.33", "p1", 0.96)
-    weak = [read("BLOK A1ON/3", pid, score) for pid, score in (("p2", 0.70), ("p3", 0.55))]
+    strong = read("BLOK A-1/NO.12", "p1", 0.96)
+    weak = [read("BLOK A1ON/1", pid, score) for pid, score in (("p2", 0.70), ("p3", 0.55))]
     result = resolve([strong, *weak], 0.93, True, single_pass_threshold=None)
-    assert result.candidate == "BLOK A-1/NO.33"
+    assert result.candidate == "BLOK A-1/NO.12"
     assert result.status == "review" and "second_read_required" in result.reasons
 
 
 def test_readings_that_differ_in_punctuation_are_not_settled():
-    one = read("JL. KH.MAS MANSYUR NO.5A", "p1", 0.99)
-    other = read("JL.KH.MAS MANSYUR NO 5A", "p2", 0.999)
+    one = read("JL. KH.AGUS SALIM NO.7B", "p1", 0.99)
+    other = read("JL.KH.AGUS SALIM NO 7B", "p2", 0.999)
     result = resolve([one, other], 0.93, True, single_pass_threshold=0.99)
     # The form that kept its full stop is proposed; neither form is confirmed twice.
-    assert result.candidate == "JL. KH.MAS MANSYUR NO.5A"
+    assert result.candidate == "JL. KH.AGUS SALIM NO.7B"
     assert result.value is None and "punctuation_differs" in result.reasons
     # Spacing alone is not a punctuation difference, and a form read twice is settled.
-    spaced = resolve([one, read("JL. KH.MAS MANSYUR NO.5A", "p2", 0.99)], 0.93, True)
-    assert spaced.value == "JL. KH.MAS MANSYUR NO.5A"
-    outvoted = resolve([one, read("JL. KH.MAS MANSYUR NO.5A", "p2", 0.99),
-                        read("JL.KH.MAS MANSYUR NO 5A", "p3", 0.99)], 0.93, True)
-    assert outvoted.value == "JL. KH.MAS MANSYUR NO.5A"
+    spaced = resolve([one, read("JL. KH.AGUS SALIM NO.7B", "p2", 0.99)], 0.93, True)
+    assert spaced.value == "JL. KH.AGUS SALIM NO.7B"
+    outvoted = resolve([one, read("JL. KH.AGUS SALIM NO.7B", "p2", 0.99),
+                        read("JL.KH.AGUS SALIM NO 7B", "p3", 0.99)], 0.93, True)
+    assert outvoted.value == "JL. KH.AGUS SALIM NO.7B"
 
 
 def test_a_block_code_read_as_the_digit_one_stays_in_review():
     fields = {key: resolve([read(value, pid, 0.99) for pid in ("p1", "p2")], 0.93, True)
-              for key, value in (("address", "BEKASI TIMUR BLOK 1-1/NO.33"),)}
+              for key, value in (("address", "CIMAHI SELATAN BLOK 1-1/NO.12"),)}
     ktp.review_lookalikes(fields)
     assert fields["address"].value is None
     assert "ambiguous_block_character" in fields["address"].reasons
-    for printed in ("BLOK I-1/NO.33", "BLOK A-1/5", "ANGGREK VIII/42", "JL. MERDEKA NO.1/2"):
+    for printed in ("BLOK I-1/NO.12", "BLOK A-1/5", "KENANGA VII/18", "JL. MERDEKA NO.1/2"):
         fields = {"address": resolve([read(printed, pid, 0.99) for pid in ("p1", "p2")], 0.93, True)}
         ktp.review_lookalikes(fields)
         assert fields["address"].value == printed, printed

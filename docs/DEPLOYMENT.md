@@ -1,8 +1,10 @@
 # Local sharing and server deployment
 
 Web, Flutter, native iOS and native Android all use the same REST API. Python and the
-models run on the server; each client uploads a card and reads JSON. No Docker setup
-is required. Start with the included synthetic images.
+models run on the server; each client uploads a card and reads JSON. Docker is
+optional: it is the simplest way to run the service on your own server (see
+[Docker on your own server](#docker-on-your-own-server)). Start with the included
+synthetic images.
 
 ## Temporary free HTTPS URL
 
@@ -98,6 +100,78 @@ replace those. Free hardware can sleep when idle, so allow startup time on first
 Disk storage is ephemeral. This app needs neither persistent uploads nor a database.
 [SDK configuration](https://huggingface.co/docs/hub/spaces-config-reference) and
 [dependency installation](https://huggingface.co/docs/hub/spaces-dependencies).
+
+## Docker on your own server
+
+`docker-compose.yml` runs the service in a container on a server you manage, for
+example one in your office. The container holds the upload screen and the REST API on
+port 7860, restarts by itself, and reports itself healthy once the models are loaded.
+
+**What the server needs**
+
+- Linux with Docker Engine and the Compose plugin 2.24 or newer (Ubuntu 22.04 or 24.04
+  is a good choice). Windows works with Docker Desktop on WSL 2.
+- 4 CPU cores and 8 GB RAM, plus about 20 GB of free disk. No GPU. The container may
+  use 4 cores and 6 GB, leaving 2 GB to the system, and each scan uses 4 cores
+  (`OCR_CPUS`, `OCR_MEMORY` and `OCR_CPU_THREADS` in `.env`). For light use 2 cores
+  and 4 GB work: `OCR_CPUS=2`, `OCR_MEMORY=3G`, `OCR_CPU_THREADS=2`.
+- Scans run one at a time, about 3 to 8 seconds each in accurate mode. A scan that
+  arrives meanwhile waits up to `OCR_QUEUE_TIMEOUT_SECONDS` (20 in `.env.example`, at
+  most 30) before the service answers "server busy".
+- Internet access while the image is built (base image, Debian and Python packages).
+  The service itself needs none: the OCR models are inside the image.
+
+**Start it**
+
+```bash
+git clone <your repository> card-ocr && cd card-ocr   # or copy the project folder
+cp .env.example .env              # then set OCR_API_KEY to a long random value
+docker compose up -d --build      # the first build takes several minutes
+docker compose ps                 # wait for "(healthy)"
+curl http://127.0.0.1:7860/readyz
+```
+
+Clients then use `http://<server address>:7860` as the base URL: `/v1/ocr/ktp`,
+`/v1/ocr/business_card`, `/docs`, and the upload screen at `/`. With `OCR_API_KEY`
+set, REST clients send it in the `X-API-Key` header and the upload screen asks for it.
+
+The image build copies only the files the service runs (see `.dockerignore`): never
+`.env`, card photographs, tests or the virtual environment. `.env` stays on the server
+and reaches the container as environment variables; change it and run
+`docker compose up -d` to apply.
+
+**HTTPS.** Phones and browsers expect HTTPS; Android apps refuse plain HTTP unless
+configured for it. When the server has a domain name whose DNS points at it, and ports
+80 and 443 are reachable from the internet, set in `.env`:
+
+```dotenv
+OCR_DOMAIN=ocr.example.com
+OCR_BIND=127.0.0.1
+```
+
+and start with `docker compose --profile https up -d --build`. Caddy then serves
+`https://ocr.example.com` with a certificate it obtains and renews itself
+(`deploy/Caddyfile`), and port 7860 is no longer reachable from the network. Without
+a public domain, use the plain port inside the office network, or put the service
+behind a reverse proxy that already has your certificates (`deploy/nginx.conf.example`).
+
+**Everyday commands**
+
+```bash
+docker compose logs -f card-ocr            # follow the log
+git pull && docker compose up -d --build   # update to a new version
+docker compose restart card-ocr            # restart
+docker compose down                        # stop and remove the container
+```
+
+The service starts again after a reboot when Docker itself starts at boot
+(`sudo systemctl enable docker` on Ubuntu). It keeps no data: uploads are processed in
+memory and temporary files, and results are not stored.
+
+The Docker files were checked by running the image's file set, start command and
+health check outside Docker; the image itself has not been built on a server here.
+After the first build, `docker compose ps` showing `(healthy)` and one synthetic scan
+confirm it.
 
 ## Any existing Python server
 

@@ -10,3 +10,10 @@ models/
 *.egg-info/
 dist/
 build/
+
+# Editor, OS and tool droppings
+.DS_Store
+*.ses
+
+# Card photographs used for local evaluation: real people's data, never committed.
+SAMPLE FOTO/

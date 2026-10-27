@@ -202,8 +202,9 @@ def test_right_aligned_name_and_address_blocks():
              line("Kebon Jeruk, Jakarta Barat,", x=966, y=775, width=700, height=70),
              line("Jakarta, Indonesia, 11730.", x=986, y=839, width=677, height=66)]
     assert resolved(items, "full_name").value == "Andreas Surya Pratama"
-    assert resolved(items, "address").value.startswith("Taman Contoh Indah Blok A17")
-    assert resolved(items, "address").value.endswith("Jakarta, Indonesia, 11730.")
+    address = resolved(items, "address").value
+    assert address is not None and address.startswith("Taman Contoh Indah Blok A17")
+    assert address.endswith("Jakarta, Indonesia, 11730.")
 
 
 def test_unit_address_followed_by_city_and_postcode():

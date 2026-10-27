@@ -218,7 +218,7 @@ def test_misread_label_row_is_never_appended_to_the_name():
     # "Tempat/TgILahir" with a capital I would fail a stricter label match; a row holding
     # digits must not be swallowed by the name above it.
     parsed = ktp.parse(boxed([("Nama", 26, 628, 72, 0.99), (":NAMA CONTOH", 245, 623, 289, 0.97),
-                              ("XXXX : BEKASI, 10-09-1998", 245, 660, 300, 0.99)]))
+                              ("XXXX : BANDUNG, 15-08-1990", 245, 660, 300, 0.99)]))
     assert parsed.fields["full_name"][0].value == "NAMA CONTOH"
 
 
@@ -226,14 +226,14 @@ def test_labels_survive_dropped_spaces_and_l_read_as_capital_i():
     parsed = ktp.parse(make_spans([
         "PROVINSIJAWABARAT",
         "KOTABEKASI",
-        "Tempat/TgILahir : BEKASI, 10-09-1998",
+        "Tempat/TgILahir : BANDUNG, 15-08-1990",
         "RTRW : 001/018",
         "Status Perkawinan : BELUMKAWIN",
         "Berlaku Hingga : SEUMURHIDUP",
     ]))
     assert parsed.fields["province"][0].value == "JAWABARAT"
     assert parsed.fields["city"][0].value == "BEKASI"
-    assert parsed.fields["birth_date"][0].value == "1998-09-10"
+    assert parsed.fields["birth_date"][0].value == "1990-08-15"
     assert parsed.fields["rt"][0].value == "001"
     assert parsed.fields["marital_status"][0].value == "BELUM KAWIN"
     assert parsed.fields["marital_status"][0].issues == []
@@ -318,9 +318,9 @@ def test_nik_accepted_when_printed_fields_agree_but_are_themselves_under_review(
     assert fields["nik"].value is None
 
 
-def address_block(*lines, closing="RT/RW : 001/018", pass_id="p1"):
+def address_block(*lines, closing: str | None = "RT/RW : 001/018", pass_id="p1"):
     """An Alamat row, its wrapped lines, and whatever row follows the block."""
-    spans = boxed([("Alamat", 28, 100, 82, 0.99), (":JL.PADAT KARYA HERLINA", 165, 100, 330, 0.98)],
+    spans = boxed([("Alamat", 28, 100, 82, 0.99), (":JL.MELATI RAYA CEMPAKA", 165, 100, 330, 0.98)],
                   pass_id=pass_id)
     y = 130
     for line in lines:
@@ -334,27 +334,27 @@ def address_block(*lines, closing="RT/RW : 001/018", pass_id="p1"):
 def test_wrapped_address_closed_by_a_label_row_is_not_flagged():
     # Between Alamat and the next label there is no other field the wrapped line could
     # belong to, so its extent is settled by the layout rather than guessed.
-    observation = ktp.parse(address_block("ANGGREK VIII/42")).fields["address"][0]
-    assert observation.value == "JL.PADAT KARYA HERLINA ANGGREK VIII/42"
+    observation = ktp.parse(address_block("KENANGA VII/18")).fields["address"][0]
+    assert observation.value == "JL.MELATI RAYA CEMPAKA KENANGA VII/18"
     assert observation.issues == []
 
 
 def test_wrapped_address_with_nothing_below_it_stays_flagged():
-    observation = ktp.parse(address_block("ANGGREK VIII/42", closing=None)).fields["address"][0]
+    observation = ktp.parse(address_block("KENANGA VII/18", closing=None)).fields["address"][0]
     assert observation.issues == ["multiline_address_requires_review"]
 
 
 def test_address_wrapping_over_two_lines_stays_flagged():
-    parsed = ktp.parse(address_block("ANGGREK VIII/42", "BLOK C NOMOR 7"))
+    parsed = ktp.parse(address_block("KENANGA VII/18", "BLOK C NOMOR 7"))
     assert parsed.fields["address"][0].issues == ["multiline_address_requires_review"]
 
 
 def test_wrapped_address_accepted_when_both_passes_agree():
     observations = []
     for pass_id in ("p1", "p2"):
-        observations += ktp.parse(address_block("ANGGREK VIII/42", pass_id=pass_id)).fields["address"]
+        observations += ktp.parse(address_block("KENANGA VII/18", pass_id=pass_id)).fields["address"]
     result = resolve(observations, 0.93, consensus=True, single_pass_threshold=0.99)
-    assert result.value == "JL.PADAT KARYA HERLINA ANGGREK VIII/42"
+    assert result.value == "JL.MELATI RAYA CEMPAKA KENANGA VII/18"
 
 
 def test_photo_column_splits_off_a_row_holding_only_label_and_caption():
@@ -366,13 +366,13 @@ def test_photo_column_splits_off_a_row_holding_only_label_and_caption():
 
 
 def test_ordinary_label_and_value_gap_never_splits():
-    parsed = ktp.parse(boxed([("Nama", 26, 628, 72, 0.99), (":NICOLAUS SATRIA", 245, 623, 289, 0.97)]))
-    assert parsed.fields["full_name"][0].value == "NICOLAUS SATRIA"
+    parsed = ktp.parse(boxed([("Nama", 26, 628, 72, 0.99), (":DEWI LESTARI", 245, 623, 289, 0.97)]))
+    assert parsed.fields["full_name"][0].value == "DEWI LESTARI"
 
 
 def test_third_address_line_is_assembled_not_dropped():
-    parsed = ktp.parse(address_block("ANGGREK VIII/42", "BLOK C NOMOR 7"))
-    assert parsed.fields["address"][0].value.endswith("ANGGREK VIII/42 BLOK C NOMOR 7")
+    parsed = ktp.parse(address_block("KENANGA VII/18", "BLOK C NOMOR 7"))
+    assert parsed.fields["address"][0].value.endswith("KENANGA VII/18 BLOK C NOMOR 7")
 
 
 def test_documented_label_lookalikes_do_not_lose_a_field():

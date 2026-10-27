@@ -32,7 +32,8 @@ def letters(widths, gaps, height=40, margin=6):
 
 
 def test_word_gap_is_split_and_letter_gap_is_not():
-    assert len(word_pieces(bars([40, 40], gap=14))) == 2
+    pieces = word_pieces(bars([40, 40], gap=14))
+    assert pieces is not None and len(pieces) == 2
     assert word_pieces(bars([40, 40], gap=2)) is None
 
 
@@ -41,16 +42,17 @@ def test_wide_letter_gap_is_not_a_word_break():
     # upright strokes (N|U), word gaps start at 0.26. At 4x, height 160: 0.2 -> 32 px.
     # "SITI NURHALIZA": a wide N|U letter gap next to ordinary letter gaps and a word gap.
     line = letters([10] * 6, [3, 3, 12, 8, 3])
-    assert len(word_pieces(line)) == 2
+    pieces = word_pieces(line)
+    assert pieces is not None and len(pieces) == 2
     # A single word whose only wide gap is a letter gap stays whole.
     assert word_pieces(letters([10] * 4, [3, 8, 3])) is None
 
 
 def test_respace_is_only_attempted_on_long_all_letter_lines():
-    assert respace_candidate("BEKASITIMURREGENSIBLOK")
+    assert respace_candidate("CIMAHISELATANPERMAIBLOK")
     assert respace_candidate(":ANDREASSURYA")
     assert not respace_candidate("9901011508901234")
-    assert not respace_candidate("BEKASI,10-09-1998")  # a space here would break the date
+    assert not respace_candidate("BANDUNG,15-08-1990")  # a space here would break the date
     assert not respace_candidate("KOTA BEKASI")  # no token long enough to be worth re-reading
     assert respace_candidate("JL. MERDEKA NO.45")  # a full stop glued to the next word
     assert respace_candidate("JL.SOEKARNO HATTA 21")  # digits elsewhere are allowed
@@ -198,6 +200,8 @@ def line(gaps, height=40):
 
 
 class Info:
+    confirmed: set[int]
+
     def __init__(self, breaks, positions):
         self.breaks = breaks
         self.positions = positions
@@ -217,9 +221,9 @@ def test_a_rated_break_needs_a_gap_wider_than_the_line_spacing():
 
 
 def test_rated_breaks_never_enter_numbers_or_abbreviations():
-    assert rated("3275111009980001", {4: 0.9}) == "3275111009980001"
-    assert rated("JL.PADAT", {3: 0.9}) == "JL.PADAT"
-    assert rated("NO.33", {3: 0.9}) == "NO.33"
+    assert rated("9901015508901234", {4: 0.9}) == "9901015508901234"
+    assert rated("JL.MELATI", {3: 0.9}) == "JL.MELATI"
+    assert rated("NO.12", {3: 0.9}) == "NO.12"
     assert rated("BANDUNG,15-08-1990", {8: 0.5}) == "BANDUNG, 15-08-1990"
 
 

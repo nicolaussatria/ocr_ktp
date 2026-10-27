@@ -944,7 +944,7 @@ def parse(spans: list[Span], region: str = "ID", shared_area_code: bool = True) 
                            assignment="heuristic")
             else:
                 # Rank by observed typography, not alphabetic order or a dictionary of names.
-                for index, line in sorted(people, key=lambda item: item[1].height, reverse=True)[:3]:
+                for _, line in sorted(people, key=lambda item: item[1].height, reverse=True)[:3]:
                     parsed.add("full_name", line.text, line.spans, ["unlabeled_name_requires_review"],
                                assignment="heuristic")
 

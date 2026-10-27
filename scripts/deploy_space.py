@@ -24,7 +24,7 @@ from card_ocr import __version__
 ROOT = Path(__file__).resolve().parents[1]
 # What a Space needs to build and run, plus the documentation, examples and tests.
 PUBLISHED = (
-    "README.md", "START_HERE.txt", "THIRD_PARTY.md", "app.py", "run_local.py", "setup_local.py",
+    "README.md", "CHANGELOG.md", "START_HERE.txt", "THIRD_PARTY.md", "app.py", "run_local.py", "setup_local.py",
     "packages.txt", "pyproject.toml", "requirements*.txt", "requirements.lock", ".env.example", ".gitignore",
     "card_ocr/*", "docs/*", "examples/*", "scripts/*", "tests/*", "deploy/*",
 )
@@ -40,7 +40,7 @@ def published_files() -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else None)
     parser.add_argument("space", help="the Space to update, as <user>/<space>")
     parser.add_argument("--dry-run", action="store_true", help="list the files and stop")
     args = parser.parse_args()

@@ -1,0 +1,75 @@
+# Card OCR API on your own server.
+#
+#   cp .env.example .env               then set OCR_API_KEY in .env
+#   docker compose up -d --build       build the image and start the service
+#   docker compose ps                  "healthy" once the models are loaded
+#   docker compose logs -f card-ocr    follow the log
+#   docker compose down                stop it
+#
+# The service answers on http://<server>:7860: the upload screen at /, the REST API at
+# /v1/ocr/ktp and /v1/ocr/business_card, its documentation at /docs.
+#
+# HTTPS: with a domain name that points at this server, set OCR_DOMAIN and
+# OCR_BIND=127.0.0.1 in .env and start with `docker compose --profile https up -d`.
+# Caddy then serves https://<OCR_DOMAIN> with a certificate it renews itself.
+#
+# Card photographs, .env, tests and the virtual environment are never copied into the
+# image (see .dockerignore); settings reach the container as environment variables.
+
+name: card-ocr
+
+services:
+  card-ocr:
+    build: .
+    image: card-ocr-api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # One scan uses this many cores; match OCR_CPUS. A scan waits this many seconds
+      # for the one before it, instead of answering "server busy" after 3.
+      OCR_CPU_THREADS: ${OCR_CPU_THREADS:-4}
+      OCR_QUEUE_TIMEOUT_SECONDS: ${OCR_QUEUE_TIMEOUT_SECONDS:-20}
+    ports:
+      # OCR_BIND=127.0.0.1 keeps the port off the network, for use behind Caddy.
+      - "${OCR_BIND:-0.0.0.0}:${OCR_PORT:-7860}:7860"
+    # Sized for a server with 4 cores and 8 GB RAM; 2 GB stays with the system.
+    deploy:
+      resources:
+        limits:
+          cpus: "${OCR_CPUS:-4}"
+          memory: ${OCR_MEMORY:-6G}
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: caddy:2
+    profiles: [https]
+    restart: unless-stopped
+    depends_on:
+      card-ocr:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      OCR_DOMAIN: ${OCR_DOMAIN:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

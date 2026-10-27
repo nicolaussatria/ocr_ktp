@@ -1,11 +1,10 @@
 """Regression fixtures use synthetic text, independent of the submitted card photos."""
 import numpy as np
 import pytest
-from conftest import StubEngine, make_spans
+from conftest import IsolatedSettings, StubEngine, listed, make_spans
 from fastapi.testclient import TestClient
 
 from card_ocr.api import create_app
-from card_ocr.config import Settings
 from card_ocr.imaging import rotate, rotation_matrix, text_focus
 from card_ocr.parsers import business
 from card_ocr.parsers.common import Observation
@@ -95,12 +94,12 @@ def test_second_landline_number_shares_the_printed_area_code():
 
 def test_shared_area_code_setting_reaches_the_parser(image_bytes):
     lines = ["Name: EXAMPLE PERSON", "Company: EXAMPLE CO", "Telp: (0251) 8345678, 8345679"]
-    result = OCRPipeline(StubEngine(lines), Settings(_env_file=None)).process(image_bytes, "business_card")
+    result = OCRPipeline(StubEngine(lines), IsolatedSettings()).process(image_bytes, "business_card")
     assert result.data["phones"] == ["+622518345678", "+622518345679"]
-    settings = Settings(_env_file=None, shared_area_code=False)
+    settings = IsolatedSettings(shared_area_code=False)
     result = OCRPipeline(StubEngine(lines), settings).process(image_bytes, "business_card")
     assert result.data["phones"] == ["+622518345678"]
-    assert [field.candidate for field in result.fields["phones"]] == ["+622518345678", "8345679"]
+    assert [field.candidate for field in listed(result, "phones")] == ["+622518345678", "8345679"]
 
 
 def test_foreign_national_numbers_not_silently_made_indonesian():
@@ -198,7 +197,8 @@ def test_rotation_matrix_matches_actual_pixels(degrees):
 def test_crop_transform_and_output_are_bounded():
     source = np.full((600, 800, 3), 255, dtype=np.uint8)
     box = span("HELLO", 200, 150, 250, 20)
-    result = text_focus(source, [box], Settings(_env_file=None), contrast=False)
+    result = text_focus(source, [box], IsolatedSettings(), contrast=False)
+    assert result is not None
     frame, forward = result
     assert max(frame.shape[:2]) <= 2000
     mapped = forward @ [200, 150, 1]
@@ -210,7 +210,7 @@ def test_crop_transform_and_output_are_bounded():
 @pytest.mark.parametrize("region,expected", [(None, []), ("US", ["+14232200983"])])
 def test_rest_phone_region_contract(image_bytes, region, expected):
     engine = StubEngine(["Name: EXAMPLE PERSON", "Company: EXAMPLE CO", "(423) 220-0983"])
-    with TestClient(create_app(Settings(_env_file=None), engine)) as client:
+    with TestClient(create_app(IsolatedSettings(), engine)) as client:
         data = {} if region is None else {"phone_region": region}
         result = client.post("/v1/ocr/business_card", files={"file": ("card.png", image_bytes)}, data=data)
     assert result.status_code == 200
@@ -220,7 +220,7 @@ def test_rest_phone_region_contract(image_bytes, region, expected):
 
 def test_unknown_phone_region_rejected_before_ocr(image_bytes):
     engine = StubEngine()
-    with TestClient(create_app(Settings(_env_file=None), engine)) as client:
+    with TestClient(create_app(IsolatedSettings(), engine)) as client:
         result = client.post("/v1/ocr/business_card", files={"file": ("card.png", image_bytes)},
                              data={"phone_region": "XX"})
     assert result.status_code == 422
@@ -236,7 +236,7 @@ def test_small_print_retries_are_bounded_and_fast_mode_skips_them(image_bytes):
                     span("Company: EXAMPLE CO", 100, 140, 300, 16, pid=pass_id),
                     span("hello@example.com", 100, 180, 300, 16, pid=pass_id)]
     engine = TinyEngine()
-    pipeline = OCRPipeline(engine, Settings(_env_file=None))
+    pipeline = OCRPipeline(engine, IsolatedSettings())
     result = pipeline.process(image_bytes, "business_card")
     assert engine.calls == 4
     assert len(result.processing.passes) == 4
@@ -244,7 +244,7 @@ def test_small_print_retries_are_bounded_and_fast_mode_skips_them(image_bytes):
     pipeline.process(image_bytes, "business_card", "fast")
     assert engine.calls == 5
     engine = TinyEngine()
-    OCRPipeline(engine, Settings(_env_file=None, business_retry=False)).process(image_bytes, "business_card")
+    OCRPipeline(engine, IsolatedSettings(business_retry=False)).process(image_bytes, "business_card")
     assert engine.calls == 2
 
 
@@ -252,11 +252,11 @@ def test_street_prefix_read_as_capital_i_is_written_out():
     # "JI." is the recogniser reading the l of "Jl." as I; the abbreviation is fixed.
     assert business._canonical_street("JI. Raya Ciawi Km.8, Bogor") == ("Jl. Raya Ciawi Km.8, Bogor", [])
     assert business._canonical_street("J1.Raya Ciawi") == ("Jl.Raya Ciawi", [])
-    assert business._canonical_street("JI. PADAT KARYA VIII") == ("JL. PADAT KARYA VIII", [])
+    assert business._canonical_street("JI. MELATI RAYA VIII") == ("JL. MELATI RAYA VIII", [])
 
 
 def test_correct_street_prefix_is_left_exactly_as_printed():
-    for printed in ("Jl. Kebon Agung Gede", "JL.PADAT KARYA", "Jalan Merdeka 10"):
+    for printed in ("Jl. Kebon Agung Gede", "JL.MELATI RAYA", "Jalan Merdeka 10"):
         assert business._canonical_street(printed) == (printed, [])
 
 
@@ -325,6 +325,6 @@ class RecordingPipeline(OCRPipeline):
 def test_business_respacing_never_touches_contact_lines(image_bytes):
     engine = StubEngine(["DEWILESTARI", "Direktur Operasional", "dewi.lestari@example.com",
                          "0812-3456-7890", "Jl. Melati No.12, Jakarta"])
-    pipeline = RecordingPipeline(engine, Settings(_env_file=None))
+    pipeline = RecordingPipeline(engine, IsolatedSettings())
     pipeline.process(image_bytes, "business_card", "fast")
     assert pipeline.respaced == ["DEWILESTARI", "Direktur Operasional", "Jl. Melati No.12, Jakarta"]

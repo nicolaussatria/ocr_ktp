@@ -11,6 +11,7 @@ from card_ocr.config import Settings
 from card_ocr.engine import RapidEngine
 from card_ocr.errors import OCRProblem
 from card_ocr.pipeline import OCRPipeline
+from card_ocr.schemas import Mode, OCRResponse
 
 
 def same(actual, expected):
@@ -25,7 +26,7 @@ def _blank_metric():
     return {"evaluated": 0, "correct_final": 0, "accepted": 0, "wrong_accepted": 0, "correct_candidate": 0}
 
 
-def _aggregate(rows: list[tuple[dict, object, float]]) -> dict:
+def _aggregate(rows: list[tuple[dict, OCRResponse | None, float]]) -> dict:
     fields: dict[str, dict] = {}
     documents_requiring_review = 0
     for entry, response, _ in rows:
@@ -56,13 +57,13 @@ def _aggregate(rows: list[tuple[dict, object, float]]) -> dict:
     }
 
 
-def evaluate(manifest_path: Path, mode="accurate") -> dict:
+def evaluate(manifest_path: Path, mode: Mode = "accurate") -> dict:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     settings = Settings()
     pipeline = OCRPipeline(RapidEngine(settings), settings)
     # Warmup excluded from latency statistics.
     pipeline.engine.recognize(np.full((300, 800, 3), 255, dtype=np.uint8), "warmup")
-    rows: list[tuple[dict, object, float]] = []
+    rows: list[tuple[dict, OCRResponse | None, float]] = []
     errors = {}
     for entry in manifest:
         started = perf_counter()

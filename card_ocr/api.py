@@ -123,6 +123,8 @@ async def process_bytes(
             return await anyio.to_thread.run_sync(
                 app.state.pipeline.process, payload, document_type, mode, include_raw, rotation, phone_region
             )
+        # A cancel scope exits early only when it is cancelled itself, and this one never is.
+        raise AssertionError("unreachable")
     except OCRProblem:
         raise
     except Exception as exc:

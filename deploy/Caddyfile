@@ -1,0 +1,11 @@
+# HTTPS in front of the Card OCR API: `docker compose --profile https up -d`.
+#
+# OCR_DOMAIN (in .env) is a domain name whose DNS points at this server, and ports 80
+# and 443 must be reachable from the internet so the certificate can be issued and
+# renewed. Uploads are limited to OCR_MAX_UPLOAD_MB (10 MB) plus the form around them.
+{$OCR_DOMAIN} {
+	request_body {
+		max_size 11MB
+	}
+	reverse_proxy card-ocr:7860
+}

@@ -25,6 +25,7 @@ Nothing is found when fewer than three sides are visible, or when whole lines of
 same size lie beside the outline (two cards in one picture); callers then keep the
 whole photograph.
 """
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import atan, atan2, degrees
 
@@ -118,7 +119,7 @@ FRAME_CUT = 2.0
 FRAME_HEADING = 0.34  # sine of 20 degrees
 
 
-def runs_off(box: list[list[float]], width: int, height: int) -> bool:
+def runs_off(box: np.ndarray | Sequence[Sequence[float]], width: int, height: int) -> bool:
     """Whether a text box, in the pixels of a photograph, is cut off at one of its ends."""
     points = np.asarray(box, dtype=float)
     if points.shape != (4, 2):
@@ -267,7 +268,7 @@ def _candidates(chains, seed_along: float, seed_across: float, after: bool, bord
             np.r_[distance[usable], abs(border - seed_across)])
 
 
-def _side(cover: np.ndarray, start: np.ndarray, end: np.ndarray):
+def _side(cover: np.ndarray, start: np.ndarray, end: np.ndarray) -> tuple[np.ndarray, ...]:
     """For every candidate side: the share of it that is visible, whether its first and
     its last end reach their corners, and how many of the two run on past one. Axis 0 of
     ``start``/``end`` is the edge."""
@@ -331,11 +332,12 @@ def locate_card(image: np.ndarray, spans: list[Span]) -> CardOutline | None:
     centres, areas, sizes = [], [], []
     for vote_angle, area, span in _votes(spans):
         box = np.asarray(span.box, dtype=float)
-        if (abs(vote_angle - angle) <= DIRECTION_WINDOW + 2 and span.score >= 0.8
+        geometry = line_geometry(span.box)  # never None: _votes keeps only measurable boxes
+        if (geometry is not None and abs(vote_angle - angle) <= DIRECTION_WINDOW + 2 and span.score >= 0.8
                 and not runs_off(span.box, width, height)):
             centres.append(matrix @ np.r_[box.mean(axis=0), 1.0])
             areas.append(area)
-            sizes.append(line_geometry(span.box)[2])
+            sizes.append(geometry[2])
     if len(centres) < 2:
         return None
     centres, areas, sizes = np.asarray(centres), np.asarray(areas), np.asarray(sizes)
@@ -475,7 +477,7 @@ def card_view(source: np.ndarray, corners: np.ndarray, max_side: int) -> tuple[n
     return frame, matrix.astype(float) @ shift
 
 
-def on_card(box: list[list[float]], corners: np.ndarray) -> bool:
+def on_card(box: np.ndarray | Sequence[Sequence[float]], corners: np.ndarray) -> bool:
     """Whether the middle of a text box, given in the outline's pixels, lies on the card."""
     x, y = np.asarray(box, dtype=float).mean(axis=0)
     return cv2.pointPolygonTest(np.asarray(corners, dtype=np.float32), (float(x), float(y)), False) >= 0

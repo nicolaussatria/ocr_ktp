@@ -13,6 +13,7 @@ compression, uneven light, and small print.
 import argparse
 import json
 import zlib
+from collections.abc import Callable
 from pathlib import Path
 
 import cv2
@@ -45,7 +46,7 @@ MONO_BOLD_CANDIDATES = [
 ]
 
 
-def load_font(size: int, mono: bool = False, bold: bool = False) -> ImageFont.FreeTypeFont:
+def load_font(size: int, mono: bool = False, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidates = {
         (False, False): FONT_CANDIDATES,
         (True, False): MONO_CANDIDATES,
@@ -572,9 +573,9 @@ def _perspective(image: np.ndarray, strength: float = 0.035) -> np.ndarray:
     framed = _white_border(image)
     height, width = framed.shape[:2]
     dx, dy = width * strength, height * strength
-    source = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
-    target = np.float32([[dx, dy * 0.4], [width - dx * 0.6, 0],
-                         [width - dx * 0.2, height - dy], [dx * 0.5, height - dy * 0.3]])
+    source = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype=np.float32)
+    target = np.array([[dx, dy * 0.4], [width - dx * 0.6, 0],
+                       [width - dx * 0.2, height - dy], [dx * 0.5, height - dy * 0.3]], dtype=np.float32)
     matrix = cv2.getPerspectiveTransform(source, target)
     return cv2.warpPerspective(framed, matrix, (width, height), flags=cv2.INTER_CUBIC,
                                borderValue=(255, 255, 255))
@@ -590,7 +591,7 @@ def _jpeg(image: np.ndarray, quality: int) -> np.ndarray:
 
 
 def _uneven_light(image: np.ndarray, low: float = 0.55) -> np.ndarray:
-    height, width = image.shape[:2]
+    width = image.shape[1]
     gradient = np.linspace(low, 1.0, width, dtype=np.float32)[None, :]
     shaded = image.astype(np.float32) * gradient[:, :, None]
     return np.clip(shaded, 0, 255).astype(np.uint8)
@@ -618,13 +619,14 @@ def _on_table(image: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     cv2.rectangle(mask, (0, radius), (width, height - radius), 255, -1)
     for cx, cy in ((radius, radius), (width - radius, radius), (radius, height - radius),
                    (width - radius, height - radius)):
-        cv2.circle(mask, (cx, cy), radius, 255, -1)
+        cv2.circle(mask, (cx, cy), radius, (255,), -1)
 
     x0, y0 = (frame_w - width) / 2, (frame_h - height) / 2
     jitter = lambda: rng.uniform(-0.035, 0.035) * width  # noqa: E731
-    source = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
-    target = np.float32([[x0 + jitter(), y0 + jitter()], [x0 + width + jitter(), y0 + jitter()],
-                         [x0 + width + jitter(), y0 + height + jitter()], [x0 + jitter(), y0 + height + jitter()]])
+    source = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype=np.float32)
+    target = np.array([[x0 + jitter(), y0 + jitter()], [x0 + width + jitter(), y0 + jitter()],
+                       [x0 + width + jitter(), y0 + height + jitter()], [x0 + jitter(), y0 + height + jitter()]],
+                      dtype=np.float32)
     matrix = cv2.getPerspectiveTransform(source, target)
     card = cv2.warpPerspective(image, matrix, (frame_w, frame_h), flags=cv2.INTER_CUBIC)
     alpha = cv2.warpPerspective(mask, matrix, (frame_w, frame_h), flags=cv2.INTER_LINEAR)
@@ -635,7 +637,7 @@ def _on_table(image: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return _jpeg(_blur(composed, 0.7), 80)
 
 
-CONDITIONS: dict[str, object] = {
+CONDITIONS: dict[str, Callable[[np.ndarray, np.random.Generator], np.ndarray]] = {
     "clean": lambda image, rng: image,
     "tilt4": lambda image, rng: _tilt(image, 4.0),
     "tilt8": lambda image, rng: _tilt(image, 8.0),

@@ -77,7 +77,7 @@ the correct value, address included, up from 12. Across the six business cards, 
 have an accepted address.
 
 **Still withheld, correctly.** On the earlier test KTP the address candidate reads
-"1-1/NO.33" where the card prints "I-1/NO.33", and only one pass produced it. On the
+block "1-1" where the card prints "I-1", and only one pass produced it. On the
 low-resolution Nusantara card the street prefix is a genuine guess. Both stay in review.
 
 ## Tuning pass (v1.5)
@@ -192,7 +192,7 @@ pass, 47 of 90 annotated KTP fields were accepted correctly and 4 wrongly, and t
 turned card returned an error.
 
 **Word breaks the recogniser rated but did not decode.** On photographed e-KTP print
-the printed spaces are narrow: `MUSTIKAJAYA`, `PEKALONGANBARAT` and `SATRIAHASTA` were
+the printed spaces are narrow: `MUSTIKAJAYA`, `PEKALONGANBARAT` and a person's two-word name were
 accepted without their spaces. The first v1.6 pass had made this worse: its stricter
 pixel threshold (0.22 of the line height, tuned on clean synthetic print) no longer split
 two lines that v1.5's 0.18 had split. Pixel gaps alone cannot separate the cases (real
@@ -239,16 +239,16 @@ another `NO 5A`; the second was accepted. Readings still group, but when their
 punctuation differs and no single form was read twice, the field gets
 `punctuation_differs`. The form with more reads, then more marks, is proposed.
 
-**A block code the model reads as a digit.** The reported address prints `I-1/NO.33` on
-the wrapped second line. Every pass, and every re-read variant tried (padding,
+**A block code the model reads as a digit.** The reported address prints block `I-1` and a
+house number on the wrapped second line. Every pass, and every re-read variant tried (padding,
 magnification, contrast, channel selection, denoising, sharpening), returned
-`1-1/NO.33`, most at 0.93–0.99. More passes would only have confirmed it, so none were
+`1-1`, most at 0.93–0.99. More passes would only have confirmed it, so none were
 added.
 
 Printed samples across sizes and weights show why. A line reading `I-1` on its own comes
 back as `1-1` at every size tried, from 17 to 44 pixels of cap height; magnification
 cannot recover what the pixels never held, and a closer photograph does not settle it
-either. The same characters inside `BLOK I-1/NO.33` are read correctly at nearly every
+either. The same characters after the word `BLOK` are read correctly at nearly every
 size: the model leans on the neighbouring word. A wrapped address line loses that
 neighbour, which is exactly this card. The bias runs one way only — a printed `1-1` was
 never read as `I` in any sample.

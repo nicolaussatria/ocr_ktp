@@ -12,11 +12,6 @@ from .errors import OCRProblem
 from .schemas import Quality, Span
 
 
-def decode_image(payload: bytes, settings: Settings) -> tuple[np.ndarray, Quality]:
-    image, quality, _ = decode_source(payload, settings)
-    return image, quality
-
-
 def decode_source(payload: bytes, settings: Settings) -> tuple[np.ndarray, Quality, np.ndarray]:
     """The image every pass reads, its quality figures, and the upload at full size.
 
@@ -85,7 +80,7 @@ def decode_source(payload: bytes, settings: Settings) -> tuple[np.ndarray, Quali
 
 
 # Word respacing. This recogniser often returns a printed line with the word breaks
-# missing ("BEKASITIMURREGENSIBLOK"), and occasionally invents one ("SITI N URHALIZA").
+# missing ("CIMAHISELATANPERMAIBLOK"), and occasionally invents one ("SITI N URHALIZA").
 # The real breaks are visible in the image as blank pixel columns, so they are recovered
 # from the picture rather than guessed from a dictionary.
 #

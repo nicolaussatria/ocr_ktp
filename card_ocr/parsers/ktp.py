@@ -4,6 +4,7 @@ from statistics import median
 
 from ..schemas import FieldResult, Span
 from .common import (
+    Observation,
     Parsed,
     canonical_street,
     flag,
@@ -277,7 +278,7 @@ def _continuation_allowed(key: str, text: str) -> bool:
     if key == "address":
         return True
     if key == "full_name":
-        # "Tempat/TgILahir : BEKASI, 10-09-1998" fails a label match when the l reads as
+        # "Tempat/TgILahir : BANDUNG, 15-08-1990" fails a label match when the l reads as
         # I. Requiring letters only keeps a birth line from being appended to the name.
         return bool(text) and all(c.isalpha() or c in " .,'-" for c in text)
     return False
@@ -353,7 +354,7 @@ def parse(spans: list[Span]) -> Parsed:
     value_left = 0.0
     # An address whose wrapped line is not closed off by a later labelled row: there is
     # nothing below it to prove where the address ends, so its extent stays a guess.
-    open_addresses: list[tuple[object, int]] = []
+    open_addresses: list[tuple[Observation, int]] = []
     # e-KTP data is printed in plain capitals and digits, without diacritics.
     table = rows(normalized(spans, fold_accents=True))
     value_x = _value_column(table)
@@ -453,7 +454,7 @@ def parse(spans: list[Span]) -> Parsed:
 
 
 # This recogniser reads a plain capital I as the digit 1 confidently, and the same way in
-# every re-read of the crop: a card printing "I-1/NO.33" came back as "1-1/NO.33" at 0.98.
+# every re-read of the crop: a card printing block "I-1" came back as "1-1" at 0.98.
 # So a one-character block code "1" (or "l") in front of a dash or slash stays a review
 # candidate however many passes agree; a block code actually read as "I" goes against
 # that bias and is kept. After a dash, where a number is expected, a lone I or l is the

@@ -43,7 +43,7 @@ def test_a_held_card_among_other_things_is_outlined():
     image = scene((other, PAPER), (CARD, PAPER), (thumb, SKIN))
     behind = [line(60, 120 + 34 * row, width=200, height=24, angle=21.0, text="OTHER CARD") for row in range(4)]
     outline = locate_card(image, card_lines() + behind)
-    assert close(outline, CARD)
+    assert outline is not None and close(outline, CARD)
     assert outline.angle == pytest.approx(-1.4, abs=0.2)
     assert 0.3 < outline.area < 0.4
     # The print of the card behind is not on the card.
@@ -93,7 +93,7 @@ def test_nothing_is_outlined_without_edges_or_without_print():
 
 def test_the_card_view_keeps_the_detail_of_the_full_size_upload():
     source = cv2.resize(scene((CARD, PAPER)), None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-    corners = np.float32(CARD) * 3
+    corners = np.asarray(CARD, dtype=np.float32) * 3
     frame, matrix = card_view(source, corners, 2000)
     assert max(frame.shape[:2]) == 2000
     assert 1.5 < frame.shape[1] / frame.shape[0] < 1.8
@@ -105,7 +105,7 @@ def test_the_card_view_keeps_the_detail_of_the_full_size_upload():
     # The card itself is paper from edge to edge of that rectangle.
     assert frame[frame.shape[0] // 2, frame.shape[1] // 2].min() > 220
     # A small upload is magnified at most twice.
-    small, _ = card_view(scene((CARD, PAPER)), np.float32(CARD) / 1, 5000)
+    small, _ = card_view(scene((CARD, PAPER)), np.asarray(CARD, dtype=np.float32), 5000)
     assert max(small.shape[:2]) < 2 * 830 * 1.05
 
 

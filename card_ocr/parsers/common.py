@@ -238,7 +238,7 @@ def resolve(
         for item in group:
             for pass_id in {span.pass_id for span in item.value_spans or item.spans}:
                 per_pass[pass_id] = max(per_pass.get(pass_id, 0.0), item.score)
-        strongest = sorted(per_pass, key=per_pass.get, reverse=True)[:2]
+        strongest = sorted(per_pass, key=lambda pass_id: per_pass[pass_id], reverse=True)[:2]
         candidate = Candidate(
             value=display,
             ocr_score=round(min(per_pass[p] for p in strongest), 4),

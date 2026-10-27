@@ -53,7 +53,7 @@ def build_demo(api: FastAPI, settings: Settings) -> gr.Blocks:
 
     with gr.Blocks(title="Card OCR · KTP & Business Cards", analytics_enabled=False,
                    delete_cache=(600, 600)) as demo:
-       
+
         with gr.Row():
             with gr.Column(scale=1):
                 upload = gr.File(label="Card image · JPEG, PNG or WebP", type="filepath",

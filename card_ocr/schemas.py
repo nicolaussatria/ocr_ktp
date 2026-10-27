@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+CardKind = Literal["ktp", "business_card"]
 DocumentType = Literal["ktp", "business_card", "auto"]
 Mode = Literal["fast", "accurate"]
 
@@ -107,7 +108,7 @@ class Processing(BaseModel):
 class OCRResponse(BaseModel):
     schema_version: str = "1.0"
     request_id: str
-    document_type: Literal["ktp", "business_card"]
+    document_type: CardKind
     status: Literal["ok", "needs_review"]
     needs_review: bool
     data: dict[str, str | None | list[str]]

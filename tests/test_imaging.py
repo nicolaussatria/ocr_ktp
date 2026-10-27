@@ -70,7 +70,7 @@ def card_on_desk(corners, size=(1200, 900), card=(245, 245, 240), desk=(40, 70, 
     """A light card, drawn as the given quadrilateral, on a darker desk, with some print."""
     width, height = size
     image = np.full((height, width, 3), desk, np.uint8)
-    cv2.fillConvexPoly(image, np.int32(corners), card)
+    cv2.fillConvexPoly(image, np.asarray(corners, dtype=np.int32), card)
     left, top = np.min(corners, axis=0)
     for row in range(5):
         cv2.putText(image, "NAMA : CONTOH", (int(left) + 40, int(top) + 60 + 45 * row),
@@ -88,7 +88,7 @@ def test_card_on_a_desk_is_flattened_to_its_own_proportions():
     assert 1.4 < frame.shape[1] / frame.shape[0] < 1.8
     assert max(frame.shape[:2]) >= 1500  # magnified towards the detector's working size
     # Each photographed corner lands on the matching corner of the card area.
-    mapped = cv2.perspectiveTransform(np.float32([KTP_QUAD]), matrix)[0]
+    mapped = cv2.perspectiveTransform(np.array([KTP_QUAD], dtype=np.float32), matrix)[0]
     pad_x, pad_y = frame.shape[1] * 0.02 / 1.04, frame.shape[0] * 0.02 / 1.04
     expected = [[pad_x, pad_y], [frame.shape[1] - pad_x, pad_y],
                 [frame.shape[1] - pad_x, frame.shape[0] - pad_y], [pad_x, frame.shape[0] - pad_y]]
@@ -109,7 +109,7 @@ def test_no_card_is_found_when_nothing_should_change():
 def test_two_cards_in_one_photo_are_not_cropped_to_one():
     # A front-and-back mockup: flattening either card would drop the other's details.
     image = card_on_desk([[60, 300], [560, 300], [560, 610], [60, 610]])
-    cv2.fillConvexPoly(image, np.int32([[640, 300], [1140, 300], [1140, 610], [640, 610]]), (245, 245, 240))
+    cv2.fillConvexPoly(image, np.array([[640, 300], [1140, 300], [1140, 610], [640, 610]], dtype=np.int32), (245, 245, 240))
     assert find_card(image) is None
 
 

@@ -1,0 +1,14 @@
+# Only what the service runs is sent to the image build: never .env, card photographs,
+# the virtual environment, git history or test output. Everything else is left out.
+*
+!Dockerfile
+!packages.txt
+!requirements.lock
+!THIRD_PARTY.md
+!app.py
+!card_ocr/
+!scripts/
+!examples/
+**/__pycache__
+**/*.pyc
+**/.DS_Store

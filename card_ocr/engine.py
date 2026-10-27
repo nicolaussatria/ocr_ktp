@@ -1,13 +1,17 @@
 from hashlib import sha256
 from importlib.metadata import version
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import cv2
 import numpy as np
 
 from .config import Settings
 from .schemas import Span
+
+if TYPE_CHECKING:
+    from rapidocr.ch_ppocr_rec import TextRecOutput
+    from rapidocr.utils.output import RapidOCROutput
 
 MODELS = {
     "det": "PP-OCRv6_det_small.onnx",
@@ -23,16 +27,15 @@ MODEL_HASHES = {
 
 
 class Engine(Protocol):
+    """What the pipeline needs from an OCR engine.
+
+    An engine may also offer ``recognize_crop(patch) -> str | None``, recognition of one
+    already-cropped word; the pipeline restores word breaks with it when it is there.
+    """
+
     name: str
     models: dict[str, str]
     hashes: dict[str, str]
-
-    def recognize_crop(self, patch: np.ndarray) -> str | None:
-        """Recognition only, no detection: re-read one already-cropped word."""
-        output = self._engine(patch, use_det=False, use_cls=False, use_rec=True)
-        if not output.txts:
-            return None
-        return str(output.txts[0]).strip()
 
     def recognize(self, image: np.ndarray, pass_id: str) -> list[Span]: ...
 
@@ -205,8 +208,8 @@ def _with_rated_breaks(text: str, info) -> tuple[str, list[int]]:
     for index, character in enumerate(text):
         left = text[index - 1] if index else ""
         if (index in confirmed and left and not left.isspace()
-                and (character.isalpha() and (left.isalpha() or left in BREAK_AFTER)
-                     or character.isdigit() and left in BREAK_AFTER)):
+                and ((character.isalpha() and (left.isalpha() or left in BREAK_AFTER))
+                     or (character.isdigit() and left in BREAK_AFTER))):
             result.append(" ")
             inserted.append(seen)
         seen += character.isalnum()
@@ -282,10 +285,13 @@ class RapidEngine:
                 "Rec.rec_batch_num": 8,
             }
         )
-        recognizer = self._engine.text_rec
+        # The recogniser's decoder, the line classifier and the recogniser are wrapped in
+        # place; RapidOCR's type hints do not allow replacing them.
+        stages: Any = self._engine
+        recognizer = stages.text_rec
         recognizer.postprocess_op = _BreakEvidence(recognizer.postprocess_op)
-        self._engine.text_cls = _LineOrientation(self._engine.text_cls)
-        self._engine.text_rec = _CharacterConfidence(recognizer, self._engine.text_cls)
+        stages.text_cls = _LineOrientation(stages.text_cls)
+        stages.text_rec = _CharacterConfidence(recognizer, stages.text_cls)
 
     def recognize_crop(self, patch: np.ndarray) -> str | None:
         """Recognition only, no detection: re-read one already-cropped word.
@@ -295,13 +301,13 @@ class RapidEngine:
         letter is as wide as a word space; breaks confirmed on the whole line are kept
         by the respacer instead.
         """
-        output = self._engine(patch, use_det=False, use_cls=False, use_rec=True)
+        output = cast("TextRecOutput", self._engine(patch, use_det=False, use_cls=False, use_rec=True))
         if not output.txts:
             return None
         return str(output.txts[0]).strip()
 
     def recognize(self, image: np.ndarray, pass_id: str) -> list[Span]:
-        output = self._engine(image, use_det=True, use_cls=True, use_rec=True)
+        output = cast("RapidOCROutput", self._engine(image, use_det=True, use_cls=True, use_rec=True))
         if output.txts is None or output.boxes is None or output.scores is None:
             return []
         details = output.word_results if len(output.word_results or ()) == len(output.txts) else ()

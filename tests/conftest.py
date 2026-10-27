@@ -5,8 +5,31 @@ import cv2
 import numpy as np
 import pytest
 from PIL import Image, ImageDraw
+from pydantic_settings import SettingsConfigDict
 
-from card_ocr.schemas import Span
+from card_ocr.config import Settings
+from card_ocr.schemas import FieldResult, OCRResponse, Span
+
+
+class IsolatedSettings(Settings):
+    """Settings from the test's own values and the environment, never from a developer's .env file."""
+
+    model_config = SettingsConfigDict(env_file=None)
+
+
+def scalar(result: OCRResponse, key: str) -> FieldResult:
+    """A single-valued field of a response."""
+    value = result.fields[key]
+    assert isinstance(value, FieldResult)
+    return value
+
+
+def listed(result: OCRResponse, key: str) -> list[FieldResult]:
+    """A list field of a response, such as its telephone numbers."""
+    value = result.fields[key]
+    assert isinstance(value, list)
+    return value
+
 
 KTP_LINES = [
     "PROVINSI CONTOH",
@@ -35,7 +58,8 @@ def make_spans(lines, pass_id="p1", score=0.999):
     ]
 
 
-def tilted_line(x, y, width=300, height=34, angle=0.0, text="PRINTED LINE", **fields):
+def tilted_line(x: float, y: float, width: float = 300, height: float = 34, angle: float = 0.0,
+                text: str = "PRINTED LINE", **fields) -> Span:
     """A text box whose top edge starts at (x, y) and is turned by ``angle`` degrees."""
     along = np.array([math.cos(math.radians(angle)), math.sin(math.radians(angle))])
     down = np.array([-along[1], along[0]])
@@ -52,7 +76,7 @@ def drawn_photo(*shapes, size=(1200, 900), background=(70, 95, 120), grain=0.0):
     width, height = size
     image = np.full((height, width, 3), background, np.uint8)
     for corners, colour in shapes:
-        cv2.fillConvexPoly(image, np.int32(corners), colour, lineType=cv2.LINE_AA)
+        cv2.fillConvexPoly(image, np.asarray(corners, dtype=np.int32), colour, lineType=cv2.LINE_AA)
     image = cv2.GaussianBlur(image, (5, 5), 0)
     if grain:
         noise = np.random.default_rng(7).normal(0.0, grain, image.shape)

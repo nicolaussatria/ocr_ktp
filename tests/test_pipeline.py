@@ -5,9 +5,8 @@ import math
 import cv2
 import numpy as np
 import pytest
-from conftest import StubEngine, drawn_photo, tilted_line
+from conftest import IsolatedSettings, StubEngine, drawn_photo, listed, scalar, tilted_line
 
-from card_ocr.config import Settings
 from card_ocr.pipeline import OCRPipeline
 from card_ocr.schemas import Span
 
@@ -32,7 +31,7 @@ class TiltAwareEngine(StubEngine):
 
 def test_tilted_read_is_replaced_by_a_levelled_read(image_bytes):
     engine = TiltAwareEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp")
     assert [item.enhancement for item in result.processing.passes][:2] == ["original", "deskew"]
     assert result.data["full_name"] == "NAMA CONTOH"
     assert result.data["nik"] == "9901011508901234"
@@ -40,19 +39,19 @@ def test_tilted_read_is_replaced_by_a_levelled_read(image_bytes):
 
 def test_level_reads_do_not_add_a_deskew_pass(image_bytes):
     engine = StubEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp")
     assert [item.enhancement for item in result.processing.passes] == ["original", "clahe"]
     assert engine.calls == 2
 
 
 def test_deskew_can_be_disabled_and_is_skipped_in_fast_mode(image_bytes):
     engine = TiltAwareEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None, deskew_retry=False)).process(image_bytes, "ktp")
+    result = OCRPipeline(engine, IsolatedSettings(deskew_retry=False)).process(image_bytes, "ktp")
     # The page is re-read unlevelled: no deskew pass, and evidence keeps the pass ids of the reads made.
     assert [item.enhancement for item in result.processing.passes] == ["original", "clahe"]
     assert {span.pass_id for span in result.raw_ocr or []} <= {"p1", "p2"}
     engine = TiltAwareEngine()
-    OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp", "fast")
+    OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp", "fast")
     assert engine.calls == 1
 
 
@@ -68,8 +67,8 @@ class SteepTiltEngine(StubEngine):
 
 
 def test_fast_mode_levels_the_geometry_of_a_tilted_read(image_bytes):
-    settings = Settings(_env_file=None)
-    unlevelled = OCRPipeline(SteepTiltEngine(), Settings(_env_file=None, deskew_retry=False))
+    settings = IsolatedSettings()
+    unlevelled = OCRPipeline(SteepTiltEngine(), IsolatedSettings(deskew_retry=False))
     assert unlevelled.process(image_bytes, "ktp", "fast").data["religion"] != "ISLAM"  # rows merged
     engine = SteepTiltEngine()
     result = OCRPipeline(engine, settings).process(image_bytes, "ktp", "fast", include_raw=True)
@@ -77,6 +76,7 @@ def test_fast_mode_levels_the_geometry_of_a_tilted_read(image_bytes):
     assert result.data["religion"] == "ISLAM"
     assert result.data["full_name"] == "NAMA CONTOH"
     # Boxes are reported in the levelled frame, and to_input still maps them onto the upload.
+    assert result.raw_ocr
     first = result.raw_ocr[0]
     corner = np.asarray(result.processing.passes[0].to_input) @ np.array([*first.box[0], 1.0])
     assert np.allclose(corner[:2] / corner[2], slanted_box(30, 50, 1000, 30, 5.0)[0], atol=0.5)
@@ -96,7 +96,7 @@ class SmallPrintEngine(StubEngine):
 
 def test_small_print_ktp_gets_magnified_retries(image_bytes):
     engine = SmallPrintEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp")
     assert engine.calls == 4
     assert [item.enhancement for item in result.processing.passes] == [
         "original", "clahe", "text_focus", "text_focus_contrast"
@@ -108,7 +108,7 @@ def test_small_print_ktp_gets_magnified_retries(image_bytes):
 
 def desk_photo() -> bytes:
     image = np.full((900, 1200, 3), (40, 70, 110), np.uint8)
-    cv2.fillConvexPoly(image, np.int32([[250, 220], [950, 190], [980, 640], [230, 650]]), (245, 245, 240))
+    cv2.fillConvexPoly(image, np.array([[250, 220], [950, 190], [980, 640], [230, 650]], dtype=np.int32), (245, 245, 240))
     return cv2.imencode(".png", image)[1].tobytes()
 
 
@@ -127,7 +127,7 @@ class ShapeEngine(StubEngine):
 
 def test_photographed_card_is_read_from_its_flattened_view():
     engine = ShapeEngine(lambda shape: True)
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(desk_photo(), "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(desk_photo(), "ktp")
     passes = result.processing.passes
     assert [item.enhancement for item in passes] == ["card", "clahe"]
     assert engine.shapes[0] != (900, 1200)
@@ -141,37 +141,37 @@ def test_photographed_card_is_read_from_its_flattened_view():
 
 def test_a_card_view_that_does_not_read_falls_back_to_the_whole_photo():
     engine = ShapeEngine(lambda shape: shape == (900, 1200))
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(desk_photo(), "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(desk_photo(), "ktp")
     assert [item.enhancement for item in result.processing.passes] == ["card", "original", "clahe"]
     assert result.data["nik"] == "9901011508901234"
     # The discarded card read contributes no evidence.
-    assert {e.pass_id for e in result.fields["nik"].candidates[0].evidence} == {"p2", "p3"}
+    assert {e.pass_id for e in scalar(result, "nik").candidates[0].evidence} == {"p2", "p3"}
 
 
 def test_card_detection_can_be_disabled(image_bytes):
     engine = ShapeEngine(lambda shape: True)
-    settings = Settings(_env_file=None, card_detection=False)
+    settings = IsolatedSettings(card_detection=False)
     result = OCRPipeline(engine, settings).process(desk_photo(), "ktp")
     assert [item.enhancement for item in result.processing.passes] == ["original", "clahe"]
     # A flat scan never gets a card pass.
-    result = OCRPipeline(ShapeEngine(lambda shape: True), Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(ShapeEngine(lambda shape: True), IsolatedSettings()).process(image_bytes, "ktp")
     assert [item.enhancement for item in result.processing.passes] == ["original", "clahe"]
 
 
 def test_small_print_retries_can_be_disabled_and_skip_fast_mode(image_bytes):
     engine = SmallPrintEngine()
-    OCRPipeline(engine, Settings(_env_file=None, small_text_retry=False)).process(image_bytes, "ktp")
+    OCRPipeline(engine, IsolatedSettings(small_text_retry=False)).process(image_bytes, "ktp")
     assert engine.calls == 2
     # The retained business-card setting still disables the shared small-print retry.
     engine = SmallPrintEngine()
-    OCRPipeline(engine, Settings(_env_file=None, business_retry=False)).process(image_bytes, "ktp")
+    OCRPipeline(engine, IsolatedSettings(business_retry=False)).process(image_bytes, "ktp")
     assert engine.calls == 2
     # A threshold at or below the measured glyph height does not retry either.
     engine = SmallPrintEngine()
-    OCRPipeline(engine, Settings(_env_file=None, small_text_height_px=16)).process(image_bytes, "ktp")
+    OCRPipeline(engine, IsolatedSettings(small_text_height_px=16)).process(image_bytes, "ktp")
     assert engine.calls == 2
     engine = SmallPrintEngine()
-    OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp", "fast")
+    OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp", "fast")
     assert engine.calls == 1
 
 
@@ -203,7 +203,7 @@ class IncompleteKTPEngine(StubEngine):
 
 def test_incomplete_ktp_triggers_recovery_even_without_small_print(image_bytes):
     engine = IncompleteKTPEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp", include_raw=True)
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp", include_raw=True)
     assert engine.calls == 4
     assert "small_text" not in result.quality.warnings
     assert [p.enhancement for p in result.processing.passes] == [
@@ -211,38 +211,38 @@ def test_incomplete_ktp_triggers_recovery_even_without_small_print(image_bytes):
     assert result.data["nik"] == "9901011508901234"
     assert result.data["full_name"] == "NAMA CONTOH"
     assert result.data["address"] == "JL CONTOH NO 123"
-    assert result.fields["nik"].candidates[0].supporting_passes == ["p3", "p4"]
-    assert any(c.value == "990101150890123" for c in result.fields["nik"].candidates)
+    assert scalar(result, "nik").candidates[0].supporting_passes == ["p3", "p4"]
+    assert any(c.value == "990101150890123" for c in scalar(result, "nik").candidates)
     retry = result.processing.passes[2]
     point = np.asarray(retry.to_input) @ np.array([0., 0., 1.])
     assert 0 <= point[0] / point[2] <= result.quality.width
     assert 0 <= point[1] / point[2] <= result.quality.height
-    assert {s.pass_id for s in result.raw_ocr} == {"p1", "p2", "p3", "p4"}
+    assert {s.pass_id for s in result.raw_ocr or ()} == {"p1", "p2", "p3", "p4"}
 
 
 @pytest.mark.parametrize("mode, enabled, calls", [("fast", True, 1), ("accurate", False, 2)])
 def test_ktp_recovery_can_be_disabled_and_preserves_fast_mode(image_bytes, mode, enabled, calls):
     engine = IncompleteKTPEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None, ktp_recovery=enabled)).process(image_bytes, "ktp", mode)
+    result = OCRPipeline(engine, IsolatedSettings(ktp_recovery=enabled)).process(image_bytes, "ktp", mode)
     assert engine.calls == calls
     assert result.data["nik"] is None
-    assert "nik_must_have_16_digits" in result.fields["nik"].reasons
+    assert "nik_must_have_16_digits" in scalar(result, "nik").reasons
 
 
 def test_recovery_is_bounded_and_never_completes_a_missing_nik_digit(image_bytes):
     engine = IncompleteKTPEngine(recover=False)
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp")
     assert engine.calls == 4
-    assert result.fields["nik"].candidate == "990101150890123"
+    assert scalar(result, "nik").candidate == "990101150890123"
     assert result.data["nik"] is None
-    assert result.fields["full_name"].status == "missing"
+    assert scalar(result, "full_name").status == "missing"
     assert result.data["address"] is None
 
 
 def test_recovery_preserves_conflicting_complete_niks(image_bytes):
-    result = OCRPipeline(IncompleteKTPEngine(conflict=True), Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(IncompleteKTPEngine(conflict=True), IsolatedSettings()).process(image_bytes, "ktp")
     assert result.data["nik"] is None
-    assert "conflicting_readings" in result.fields["nik"].reasons
+    assert "conflicting_readings" in scalar(result, "nik").reasons
 
 
 def test_context_at_the_recovery_crop_edge_does_not_replace_accepted_fields(image_bytes):
@@ -257,7 +257,7 @@ def test_context_at_the_recovery_crop_edge_does_not_replace_accepted_fields(imag
                         span.text = "RT/RW : 003/004"
             return spans
 
-    result = OCRPipeline(ClippedContextEngine(), Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(ClippedContextEngine(), IsolatedSettings()).process(image_bytes, "ktp")
     assert result.data["nik"] == "9901011508901234"
     assert result.data["province"] == "CONTOH"
     assert result.data["rt"] == "001"
@@ -274,10 +274,10 @@ def test_a_name_cut_off_by_the_recovery_crop_is_never_accepted(image_bytes):
                         span.box[1][0] = span.box[2][0] = image.shape[1] - 1
             return spans
 
-    result = OCRPipeline(ClippedNameEngine(), Settings(_env_file=None)).process(image_bytes, "ktp")
-    assert result.fields["full_name"].candidate == "NAMA CONTOH"
+    result = OCRPipeline(ClippedNameEngine(), IsolatedSettings()).process(image_bytes, "ktp")
+    assert scalar(result, "full_name").candidate == "NAMA CONTOH"
     assert result.data["full_name"] is None
-    assert "recovery_text_touches_crop_edge" in result.fields["full_name"].reasons
+    assert "recovery_text_touches_crop_edge" in scalar(result, "full_name").reasons
 
 
 def test_labelled_name_recovery_is_not_blocked_by_the_layout_fallback(image_bytes):
@@ -289,9 +289,9 @@ def test_labelled_name_recovery_is_not_blocked_by_the_layout_fallback(image_byte
             return [s.model_copy(update={"pass_id": pass_id}) for s in ektp()
                     if self.calls > 2 or s.text != "Nama"]
 
-    result = OCRPipeline(MissingLabelEngine(), Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(MissingLabelEngine(), IsolatedSettings()).process(image_bytes, "ktp")
     assert result.data["full_name"] == "BUDI SANTOSO"
-    assert result.fields["full_name"].candidates[0].supporting_passes == ["p3", "p4"]
+    assert scalar(result, "full_name").candidates[0].supporting_passes == ["p3", "p4"]
 
 
 class SidewaysEngine(StubEngine):
@@ -311,13 +311,13 @@ class SidewaysEngine(StubEngine):
 
 def test_a_ktp_that_reads_like_a_business_card_is_turned_before_giving_up(image_bytes):
     engine = SidewaysEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "ktp")
     assert [p.enhancement for p in result.processing.passes][:3] == [
         "original", "orientation_probe", "orientation_probe"]
     assert result.processing.passes[2].rotation_clockwise == 270
     assert result.data["full_name"] == "NAMA CONTOH"
     # Fast mode turns it too, rather than answering with an error.
-    result = OCRPipeline(SidewaysEngine(), Settings(_env_file=None)).process(image_bytes, "ktp", "fast")
+    result = OCRPipeline(SidewaysEngine(), IsolatedSettings()).process(image_bytes, "ktp", "fast")
     assert [p.enhancement for p in result.processing.passes] == [
         "original", "orientation_probe", "orientation_probe"]
     assert result.data["full_name"] == "NAMA CONTOH"
@@ -392,7 +392,7 @@ def held(monkeypatch):
 
 def test_a_held_business_card_is_read_from_its_own_flattened_view(held):
     engine = HeldCardEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(held_card_photo(), "business_card")
+    result = OCRPipeline(engine, IsolatedSettings()).process(held_card_photo(), "business_card")
     passes = result.processing.passes
     assert [item.enhancement for item in passes] == ["original", "card", "clahe"]
     assert engine.shapes[0] == (900, 1200) and max(engine.shapes[1]) > 1500
@@ -401,11 +401,11 @@ def test_a_held_business_card_is_read_from_its_own_flattened_view(held):
     assert result.data["address"] == "Jl. Melati No. 10, Jakarta 10110"
     # The card behind was read by the first pass and is evidence for nothing.
     assert result.data["phones"] == ["+6281234567890"]
-    assert [field.candidate for field in result.fields["emails"]] == ["rina.wijaya@contoh.co.id"]
-    assert len(result.fields["full_name"].candidates) == 1
+    assert [field.candidate for field in listed(result, "emails")] == ["rina.wijaya@contoh.co.id"]
+    assert len(scalar(result, "full_name").candidates) == 1
     assert result.status == "ok"
     # Evidence comes from the two reads of the view, and maps back onto the photograph.
-    assert {e.pass_id for e in result.fields["full_name"].candidates[0].evidence} == {"p2", "p3"}
+    assert {e.pass_id for e in scalar(result, "full_name").candidates[0].evidence} == {"p2", "p3"}
     edge = np.array([0.02 * passes[1].width / 1.04, 0.02 * passes[1].height / 1.04, 1.0])
     corner = np.asarray(passes[1].to_input) @ edge
     assert np.allclose(corner[:2] / corner[2], HELD_CARD[0], atol=10)
@@ -413,14 +413,14 @@ def test_a_held_business_card_is_read_from_its_own_flattened_view(held):
 
 def test_fast_mode_keeps_its_one_read_and_drops_what_is_not_on_the_card(held):
     engine = HeldCardEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(
+    result = OCRPipeline(engine, IsolatedSettings()).process(
         held_card_photo(), "business_card", "fast", include_raw=True)
     assert engine.calls == 1
     assert result.data["full_name"] == "Rina Wijaya"
     assert result.data["phones"] == ["+6281234567890"]
-    assert [field.candidate for field in result.fields["emails"]] == ["rina.wijaya@contoh.co.id"]
+    assert [field.candidate for field in listed(result, "emails")] == ["rina.wijaya@contoh.co.id"]
     # The read is reported in the levelled card frame, and still maps onto the photograph.
-    name = next(span for span in result.raw_ocr if span.text == "Rina Wijaya")
+    name = next(span for span in result.raw_ocr or () if span.text == "Rina Wijaya")
     assert abs(name.box[0][1] - name.box[1][1]) < 2.0
     corner = np.asarray(result.processing.passes[0].to_input) @ np.array([*name.box[0], 1.0])
     assert np.allclose(corner[:2] / corner[2], [264, 351.4], atol=6)
@@ -428,36 +428,36 @@ def test_fast_mode_keeps_its_one_read_and_drops_what_is_not_on_the_card(held):
 
 def test_a_card_view_that_reads_nothing_falls_back_to_the_photograph(held):
     engine = HeldCardEngine(view_reads=False)
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(held_card_photo(), "business_card")
+    result = OCRPipeline(engine, IsolatedSettings()).process(held_card_photo(), "business_card")
     passes = result.processing.passes
     assert [item.enhancement for item in passes] == ["original", "card", "deskew", "clahe"]
     assert (passes[3].height, passes[3].width) != (passes[1].height, passes[1].width)
-    assert result.fields["full_name"].candidate == "Rina Wijaya"
+    assert scalar(result, "full_name").candidate == "Rina Wijaya"
     # Print turned against the card's own is still left out.
-    assert [field.candidate for field in result.fields["phones"]] == ["+6281234567890"]
+    assert [field.candidate for field in listed(result, "phones")] == ["+6281234567890"]
 
 
 def test_the_card_outline_is_not_looked_for_when_card_detection_is_off():
     engine = HeldCardEngine()
-    settings = Settings(_env_file=None, card_detection=False, deskew_retry=False)
+    settings = IsolatedSettings(card_detection=False, deskew_retry=False)
     result = OCRPipeline(engine, settings).process(held_card_photo(), "business_card")
     assert [item.enhancement for item in result.processing.passes] == ["original", "clahe"]
 
 
 def test_a_silhouette_view_that_took_in_the_card_behind_is_narrowed(monkeypatch):
     # The two white cards overlap: their common silhouette is one large light quadrilateral.
-    region = np.float32([[0, 0], [1100, 0], [1100, 825], [0, 825]])
-    matrix = cv2.getPerspectiveTransform(region, np.float32([[0, 0], [1600, 0], [1600, 1200], [0, 1200]]))
+    region = np.array([[0, 0], [1100, 0], [1100, 825], [0, 825]], dtype=np.float32)
+    matrix = cv2.getPerspectiveTransform(region, np.array([[0, 0], [1600, 0], [1600, 1200], [0, 1200]], dtype=np.float32))
     wide = cv2.warpPerspective(held_card_image(), matrix, (1600, 1200))
     monkeypatch.setattr("card_ocr.pipeline.find_card", lambda image, max_side: (wide, matrix.astype(float)))
     engine = HeldCardEngine(wide=((1200, 1600), matrix.astype(float)))
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(held_card_photo(), "business_card")
+    result = OCRPipeline(engine, IsolatedSettings()).process(held_card_photo(), "business_card")
     passes = result.processing.passes
     assert [item.enhancement for item in passes] == ["card", "card", "clahe"]
     assert (passes[1].height, passes[1].width) != (1200, 1600)
     assert result.data["full_name"] == "Rina Wijaya"
     assert result.data["phones"] == ["+6281234567890"]
-    assert [field.candidate for field in result.fields["emails"]] == ["rina.wijaya@contoh.co.id"]
+    assert [field.candidate for field in listed(result, "emails")] == ["rina.wijaya@contoh.co.id"]
     edge = np.array([0.02 * passes[1].width / 1.04, 0.02 * passes[1].height / 1.04, 1.0])
     corner = np.asarray(passes[1].to_input) @ edge
     assert np.allclose(corner[:2] / corner[2], HELD_CARD[0], atol=10)
@@ -482,7 +482,7 @@ class TurnedCardEngine(StubEngine):
 @pytest.mark.parametrize("mode,reads", [("accurate", 3), ("fast", 2)])
 def test_a_sideways_business_card_is_set_upright_and_read_again(image_bytes, mode, reads):
     engine = TurnedCardEngine()
-    result = OCRPipeline(engine, Settings(_env_file=None)).process(image_bytes, "business_card", mode)
+    result = OCRPipeline(engine, IsolatedSettings()).process(image_bytes, "business_card", mode)
     assert engine.calls == reads
     passes = result.processing.passes
     assert [(item.enhancement, item.rotation_clockwise) for item in passes][:2] == [("original", 0), ("original", 90)]
@@ -496,7 +496,7 @@ def test_a_requested_ktp_is_not_turned_by_the_line_classifier(image_bytes):
         def recognize(self, image, pass_id):
             return [span.model_copy(update={"flipped": True}) for span in super().recognize(image, pass_id)]
 
-    result = OCRPipeline(Flipped(), Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(Flipped(), IsolatedSettings()).process(image_bytes, "ktp")
     assert [(item.enhancement, item.rotation_clockwise) for item in result.processing.passes] == [
         ("original", 0), ("clahe", 0)]
 
@@ -504,25 +504,25 @@ def test_a_requested_ktp_is_not_turned_by_the_line_classifier(image_bytes):
 def test_mobile_numbers_are_listed_on_their_own(image_bytes):
     lines = ["Name: EXAMPLE PERSON", "Company: EXAMPLE CO", "T: (021) 2345 6789",
              "F: (021) 2345 6780", "M: 0812 3456 7890"]
-    result = OCRPipeline(StubEngine(lines), Settings(_env_file=None)).process(image_bytes, "business_card")
+    result = OCRPipeline(StubEngine(lines), IsolatedSettings()).process(image_bytes, "business_card")
     assert result.data["phones"] == ["+622123456789", "+622123456780", "+6281234567890"]
     assert result.data["mobile_phones"] == ["+6281234567890"]
-    assert [field.phone_type for field in result.fields["phones"]] == ["landline", "fax", "mobile"]
+    assert [field.phone_type for field in listed(result, "phones")] == ["landline", "fax", "mobile"]
     # A KTP has no telephone numbers, and no such list.
-    result = OCRPipeline(StubEngine(), Settings(_env_file=None)).process(image_bytes, "ktp")
+    result = OCRPipeline(StubEngine(), IsolatedSettings()).process(image_bytes, "ktp")
     assert "mobile_phones" not in result.data
-    assert result.fields["nik"].phone_type is None
+    assert scalar(result, "nik").phone_type is None
 
 
 def test_a_trading_name_is_reported_beside_the_legal_company_name(image_bytes):
     lines = ["Name: EXAMPLE PERSON", "CONTOH-NET INDONESIA", "PT. EXAMPLE GROUP", "person@contoh-net.co.id"]
-    result = OCRPipeline(StubEngine(lines), Settings(_env_file=None)).process(image_bytes, "business_card")
+    result = OCRPipeline(StubEngine(lines), IsolatedSettings()).process(image_bytes, "business_card")
     assert result.data["company"] == "PT. EXAMPLE GROUP"
     assert result.data["company_alias"] == "CONTOH-NET INDONESIA"
-    assert result.fields["company_alias"].assignment == "contact"
+    assert scalar(result, "company_alias").assignment == "contact"
     # A card with one company name has the field, empty, and is not sent to review for it.
     lines = ["Name: EXAMPLE PERSON", "PT. EXAMPLE GROUP", "person@example.co.id", "M: 0812 3456 7890"]
-    result = OCRPipeline(StubEngine(lines), Settings(_env_file=None)).process(image_bytes, "business_card")
+    result = OCRPipeline(StubEngine(lines), IsolatedSettings()).process(image_bytes, "business_card")
     assert result.data["company_alias"] is None
-    assert result.fields["company_alias"].status == "missing"
+    assert scalar(result, "company_alias").status == "missing"
     assert not any(reason.startswith("company_alias") for reason in result.review_reasons)

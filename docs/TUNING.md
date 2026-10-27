@@ -315,7 +315,7 @@ back of the card; photos showing two cards are no longer cropped.
   before the fallback. None of the four real KTP photos met those conditions.
 - An address block code read as `1` before a dash or slash is never accepted
   automatically, even when it is right: on printed samples from 17 to 44 pixels of cap
-  height, a line reading `I-1` alone always came back as `1-1`, while `BLOK I-1/NO.33`
+  height, a line reading `I-1` alone always came back as `1-1`, while the same code after `BLOK`
   read correctly. A wrapped address line loses that neighbouring word, and no
   magnification or closer photograph recovers it.
 - Fast mode turns a sideways KTP (two extra reads) instead of answering with an error.

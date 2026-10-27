@@ -1,3 +1,4 @@
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from statistics import median
 from time import perf_counter
@@ -35,7 +36,17 @@ from .locate import (
 )
 from .parsers import business, ktp
 from .parsers.common import Observation, Parsed, flag, resolve
-from .schemas import DocumentType, FieldResult, Mode, OCRResponse, PassInfo, Processing, Span
+from .schemas import (
+    CardKind,
+    DocumentType,
+    FieldResult,
+    Mode,
+    OCRResponse,
+    PassInfo,
+    Processing,
+    Quality,
+    Span,
+)
 
 
 def _agreement_key(text: str) -> str:
@@ -82,7 +93,7 @@ def _chain(*matrices) -> np.ndarray | None:
 
 # A magnified text-crop retry runs when the median detected glyph height falls below
 # OCR_SMALL_TEXT_HEIGHT_PX; see config.Settings for the measured tradeoff.
-def _small_print(heights: list[float], settings: Settings) -> bool:
+def _small_print(heights: Sequence[float], settings: Settings) -> bool:
     return bool(heights) and median(heights) < settings.small_text_height_px
 
 
@@ -123,11 +134,11 @@ def _card_text(spans: list[Span], outline: CardOutline | None, forward, width: i
         return kept
     aligned = []
     for span in kept:
-        angle, length, tall = line_geometry(span.box)
-        if len(span.text.strip()) >= SIDEWAYS_MIN_CHARACTERS and (
-                tall >= SIDEWAYS_RATIO * length
-                or (length >= 1.5 * tall and abs(angle - direction) > CARD_TEXT_MAX_TURN)):
-            continue
+        geometry = line_geometry(span.box)  # never None: every kept box has four corners
+        if geometry is not None and len(span.text.strip()) >= SIDEWAYS_MIN_CHARACTERS:
+            angle, length, tall = geometry
+            if tall >= SIDEWAYS_RATIO * length or (length >= 1.5 * tall and abs(angle - direction) > CARD_TEXT_MAX_TURN):
+                continue
         aligned.append(span)
     return aligned
 
@@ -145,7 +156,7 @@ def _move(spans: list[Span], matrix: np.ndarray) -> None:
         span.box = _carry(span.box, matrix).round(2).tolist()
 
 
-def _classify(spans: list[Span], region: str) -> tuple[str | None, int]:
+def _classify(spans: list[Span], region: str) -> tuple[CardKind | None, int]:
     parsed_ktp = ktp.parse(spans)
     if parsed_ktp.anchors >= 3:
         return "ktp", parsed_ktp.anchors * 10
@@ -174,6 +185,55 @@ def _resolve_ktp(observations: dict[str, list[Observation]], mode: Mode, setting
                        corroborate_gender=settings.nik_corroborates_gender)
     ktp.review_lookalikes(fields)
     return fields
+
+
+def _observations(reads: list[list[Span]], kind: CardKind, region: str, settings: Settings) -> dict[str, list[Observation]]:
+    """Every value each read offers, pooled per field."""
+    parsed_passes: list[Parsed] = [
+        ktp.parse(spans) if kind == "ktp" else business.parse(spans, region, settings.shared_area_code)
+        for spans in reads
+    ]
+    observations: dict[str, list[Observation]] = {}
+    for parsed in parsed_passes:
+        for key, items in parsed.fields.items():
+            observations.setdefault(key, []).extend(items)
+    return observations
+
+
+def _results(result: FieldResult | list[FieldResult]) -> list[FieldResult]:
+    return result if isinstance(result, list) else [result]
+
+
+def _summary(fields: Mapping[str, FieldResult | list[FieldResult]], quality: Quality, kind: CardKind,
+             mode: Mode) -> tuple[dict[str, str | None | list[str]], list[str]]:
+    """The accepted values, and every reason the document needs a person to look at it."""
+    review_reasons = [f"image:{issue}" for issue in quality.warnings]
+    severe_quality = any(w in quality.warnings for w in ("possible_blur", "low_contrast"))
+    data: dict[str, str | None | list[str]] = {}
+    for key, result in fields.items():
+        for field in _results(result):
+            if severe_quality:
+                flag(field, "image_quality_requires_review")
+            if field.status == "review":
+                review_reasons.append(f"{key}:" + ",".join(field.reasons))
+        data[key] = (
+            [f.value for f in result if f.value is not None]
+            if isinstance(result, list)
+            else result.value
+        )
+    required = ktp.REQUIRED if kind == "ktp" else ("full_name", "company")
+    for key in required:
+        if any(field.status == "missing" for field in _results(fields[key])):
+            review_reasons.append(f"{key}:not_found")
+    if kind == "business_card":
+        # The accepted numbers that are mobile lines, for a form's "mobile phone" field.
+        data["mobile_phones"] = [field.value for field in _results(fields["phones"])
+                                 if field.value is not None and field.phone_type == "mobile"]
+    if kind == "business_card" and not any(data[k] for k in ("emails", "phones", "websites")):
+        review_reasons.append("no_accepted_contact")
+    if mode == "fast":
+        review_reasons.append("fast_mode_single_read")
+    return data, review_reasons
 
 
 class OCRPipeline:
@@ -231,70 +291,139 @@ class OCRPipeline:
         if region not in phonenumbers.SUPPORTED_REGIONS:
             raise OCRProblem("INVALID_PHONE_REGION", "Use a supported two-letter phone region, such as ID or US.")
         image, quality, source = decode_source(payload, self.settings)
-        image, source = rotate(image, rotation), rotate(source, rotation)
-        passes: list[PassInfo] = []
-        raw: list[Span] = []
+        run = _Run(self, quality, rotate(image, rotation), rotate(source, rotation), rotation,
+                   document_type, mode, region)
+        run.read_first()
+        run.outline_business_card()
+        run.level()
+        kind = run.settle_kind()
+        # Business cards are respaced too, but never a contact line: a gap around the "@"
+        # or a dot of an address is not a word break.
+        if self.settings.respace_words:
+            self._respace(run.view, run.base if kind == "ktp"
+                          else [span for span in run.base if not business.contact_text(span.text)])
+        observations = _observations(run.evidence_reads(), kind, region, self.settings)
+        fields = run.ktp_fields(observations) if kind == "ktp" else run.business_fields(observations)
+        data, review_reasons = _summary(fields, quality, kind, mode)
+        needs_review = bool(review_reasons)
+        return OCRResponse(
+            request_id=str(uuid4()),
+            document_type=kind,
+            status="needs_review" if needs_review else "ok",
+            needs_review=needs_review,
+            data=data,
+            fields=dict(fields),
+            review_reasons=sorted(set(review_reasons)),
+            quality=quality,
+            processing=Processing(
+                mode=mode,
+                elapsed_ms=round((perf_counter() - started) * 1000, 2),
+                engine=self.engine.name,
+                models=self.engine.models,
+                model_hashes=self.engine.hashes,
+                passes=run.passes,
+                phone_region=region if kind == "business_card" else None,
+            ),
+            raw_ocr=run.raw if include_raw else None,
+        )
+
+
+class _Run:
+    """One request: the turned upload, every read made of it, and the read the fields are
+    taken from. The steps run in the order ``OCRPipeline.process`` calls them; each one
+    settles more of that read."""
+
+    def __init__(self, pipeline: OCRPipeline, quality: Quality, image: np.ndarray, source: np.ndarray,
+                 rotation: int, document_type: DocumentType, mode: Mode, region: str):
+        self.pipeline = pipeline
+        self.engine = pipeline.engine
+        self.settings = pipeline.settings
+        self.quality = quality
+        # The upload turned by ``rotation``, at working size and at full size.
+        self.image, self.source, self.rotation = image, source, rotation
+        self.document_type: DocumentType = document_type
+        self.mode: Mode = mode
+        self.region = region
+        self.passes: list[PassInfo] = []
+        self.raw: list[Span] = []
         # What maps the rotated upload onto the frame each pass read; None is the upload.
-        frames: dict[str, np.ndarray | None] = {}
+        self.frames: dict[str, np.ndarray | None] = {}
+        self.outline: CardOutline | None = None
+        # The read the fields are taken from, and the frame it was read in: the upload or
+        # a flattened card view (``input_view``), levelled when tilted (``view``).
+        self.base: list[Span] = []
+        self.input_view = image
+        # Maps the rotated upload onto the flattened card view, when one is used.
+        self.origin: np.ndarray | None = None
+        self.view = image
+        self.skew_matrix: np.ndarray | None = None
+        self.skew = 0.0
+        # Business-card print off the card, or cut off by the photograph, is left out.
+        self.screened = False
 
-        def to_input(degrees: int, forward) -> list[list[float]]:
-            return (np.linalg.inv(rotation_matrix(quality.width, quality.height, degrees))
-                    @ np.linalg.inv(np.eye(3) if forward is None else forward)).round(8).tolist()
+    def to_input(self, degrees: int, forward) -> list[list[float]]:
+        return (np.linalg.inv(rotation_matrix(self.quality.width, self.quality.height, degrees))
+                @ np.linalg.inv(np.eye(3) if forward is None else forward)).round(8).tolist()
 
-        def read(frame: np.ndarray, degrees: int, enhancement: str, forward=None) -> list[Span]:
-            pass_id = f"p{len(passes) + 1}"
-            tick = perf_counter()
-            spans = self.engine.recognize(frame, pass_id)
-            passes.append(
-                PassInfo(
-                    id=pass_id,
-                    rotation_clockwise=degrees % 360,
-                    enhancement=enhancement,
-                    width=frame.shape[1],
-                    height=frame.shape[0],
-                    ocr_ms=round((perf_counter() - tick) * 1000, 2),
-                    to_input=to_input(degrees, forward),
-                )
+    def read(self, frame: np.ndarray, degrees: int, enhancement: str, forward=None) -> list[Span]:
+        pass_id = f"p{len(self.passes) + 1}"
+        tick = perf_counter()
+        spans = self.engine.recognize(frame, pass_id)
+        self.passes.append(
+            PassInfo(
+                id=pass_id,
+                rotation_clockwise=degrees % 360,
+                enhancement=enhancement,
+                width=frame.shape[1],
+                height=frame.shape[0],
+                ocr_ms=round((perf_counter() - tick) * 1000, 2),
+                to_input=self.to_input(degrees, forward),
             )
-            raw.extend(spans)
-            frames[pass_id] = forward
+        )
+        self.raw.extend(spans)
+        self.frames[pass_id] = forward
+        return spans
+
+    def card_text(self, spans: list[Span]) -> list[Span]:
+        if not spans:
             return spans
+        return _card_text(spans, self.outline, self.frames[spans[0].pass_id], self.image.shape[1], self.image.shape[0])
 
-        def card_text(spans: list[Span]) -> list[Span]:
-            if not spans:
-                return spans
-            return _card_text(spans, outline, frames[spans[0].pass_id], image.shape[1], image.shape[0])
+    def classify(self, spans: list[Span]) -> tuple[CardKind | None, int]:
+        return _classify(spans, self.region)
 
-        base: list[Span] | None = None
+    def read_first(self) -> None:
         for upright in (False, True):
-            base, input_view = None, image
-            # Maps the rotated upload onto the flattened card view, when one is used.
-            origin: np.ndarray | None = None
+            base: list[Span] | None = None
+            self.input_view, self.origin = self.image, None
             # A card photographed on a background is read from a flattened front view: the
             # detector sees the card at full resolution, and perspective no longer makes
             # its rows converge. The view is kept only when it reads as the requested kind
             # of card; otherwise the whole image is read exactly as before, and the
             # discarded read stays visible in raw_ocr without contributing evidence.
             if self.settings.card_detection:
-                card = find_card(image, self.settings.max_side)
+                card = find_card(self.image, self.settings.max_side)
                 if card is not None:
                     frame, matrix = card
-                    spans = read(frame, rotation, "card", matrix)
-                    found, _ = _classify(spans, region)
-                    if found is not None and document_type in ("auto", found):
-                        base, input_view, origin = spans, frame, matrix
+                    spans = self.read(frame, self.rotation, "card", matrix)
+                    found, _ = self.classify(spans)
+                    if found is not None and self.document_type in ("auto", found):
+                        base, self.input_view, self.origin = spans, frame, matrix
             if base is None:
-                base = read(image, rotation, "original")
+                base = self.read(self.image, self.rotation, "original")
+            self.base = base
             # A card held sideways or upside down is still read line by line, each line
             # turned on its own, with its layout standing on its head: names under titles,
             # rows as columns. Which lines the classifier turned says how the card lies,
             # so the upload is set upright and read once more (both modes). A requested
             # KTP keeps its own orientation probes below.
-            turn = 0 if upright or document_type == "ktp" else quarter_turn(base)
+            turn = 0 if upright or self.document_type == "ktp" else quarter_turn(base)
             if not turn:
                 break
-            image, source = rotate(image, turn), rotate(source, turn)
-            rotation = (rotation + turn) % 360
+            self.image, self.source = rotate(self.image, turn), rotate(self.source, turn)
+            self.rotation = (self.rotation + turn) % 360
+
+    def outline_business_card(self) -> None:
         # A business card held in a hand, or lying among other things, is found around its
         # own print: the first read says where the card is and how it is turned. Accurate
         # mode reads a flattened view cut from the full-size upload, and the first read
@@ -304,224 +433,181 @@ class OCRPipeline:
         # on the card. The outline is looked for in whatever was read first, so a view
         # found by the card's silhouette that also took in the card underneath is
         # narrowed to the card in front. A KTP keeps the path it was tuned on.
-        outline: CardOutline | None = None
-        screened = bool(base) and (document_type == "business_card" or (
-            document_type == "auto" and _classify(base, region)[0] == "business_card"))
-        if screened and self.settings.card_detection:
-            outline = locate_card(input_view, base)
+        base = self.base
+        self.screened = bool(base) and (self.document_type == "business_card" or (
+            self.document_type == "auto" and self.classify(base)[0] == "business_card"))
+        if self.screened and self.settings.card_detection:
+            outline = locate_card(self.input_view, base)
             if (outline is not None and outline.area >= CARD_FILLS_FRAME
                     and abs(outline.angle) < SKEW_MIN_CORRECTION):
                 outline = None
             if outline is not None:
-                if origin is not None:
-                    outline = replace(outline, corners=_carry(outline.corners, np.linalg.inv(origin)))
-                detail = source.shape[1] / image.shape[1]
-                frame, matrix = card_view(source, outline.corners * detail, self.settings.max_side)
+                if self.origin is not None:
+                    outline = replace(outline, corners=_carry(outline.corners, np.linalg.inv(self.origin)))
+                self.outline = outline
+                detail = self.source.shape[1] / self.image.shape[1]
+                frame, matrix = card_view(self.source, outline.corners * detail, self.settings.max_side)
                 matrix = matrix @ np.diag([detail, detail, 1.0])
-                if mode == "accurate":
-                    spans = read(frame, rotation, "card", matrix)
-                    found, _ = _classify(spans, region)
-                    seen = business.parse(card_text(base), region).anchors
-                    if found == "business_card" and business.parse(card_text(spans), region).anchors >= max(seen, 1):
-                        base, input_view, origin = spans, frame, matrix
+                if self.mode == "accurate":
+                    spans = self.read(frame, self.rotation, "card", matrix)
+                    found, _ = self.classify(spans)
+                    seen = business.parse(self.card_text(base), self.region).anchors
+                    if (found == "business_card"
+                            and business.parse(self.card_text(spans), self.region).anchors >= max(seen, 1)):
+                        self.base, self.input_view, self.origin = spans, frame, matrix
                     else:
-                        outline = None
-                        screened = found != "ktp"
+                        self.outline = None
+                        self.screened = found != "ktp"
                 else:
-                    read_as = next(item for item in passes if item.id == base[0].pass_id)
-                    step = matrix if origin is None else matrix @ np.linalg.inv(origin)
-                    _move([span for span in raw if span.pass_id == read_as.id], step)
-                    read_as.to_input = to_input(rotation, matrix)
-                    frames[read_as.id] = matrix
-                    input_view, origin = frame, matrix
-        if screened:
-            base = card_text(base)
-        view, skew_matrix = input_view, None
+                    read_as = next(item for item in self.passes if item.id == base[0].pass_id)
+                    step = matrix if self.origin is None else matrix @ np.linalg.inv(self.origin)
+                    _move([span for span in self.raw if span.pass_id == read_as.id], step)
+                    read_as.to_input = self.to_input(self.rotation, matrix)
+                    self.frames[read_as.id] = matrix
+                    self.input_view, self.origin = frame, matrix
+        if self.screened:
+            self.base = self.card_text(self.base)
+
+    def level(self) -> None:
         # A tilted page inflates the rotated text boxes, which breaks row clustering and
         # column splitting. The levelled re-read replaces the tilted read for parsing;
         # the tilted read stays visible in raw_ocr without contributing evidence.
-        if self.settings.deskew_retry:
-            angle = skew_angle(base)
-            if abs(angle) >= SKEW_MIN_CORRECTION:
-                frame, matrix = deskew(input_view, angle)
-                if mode == "accurate":
-                    corrected = read(frame, rotation, "deskew", _chain(matrix, origin))
-                    if screened:
-                        corrected = card_text(corrected)
-                    if (corrected and abs(skew_angle(corrected)) < abs(angle)
-                            and (origin is None or _classify(corrected, region)[0] is not None)):
-                        base, view, skew_matrix = corrected, frame, matrix
-                else:
-                    # Fast mode has no read to spare. The recognised text of a tilted page
-                    # is sound; its row geometry is not. The boxes are moved into the
-                    # levelled frame instead, and the pass's to_input follows them.
-                    _move([span for span in raw if span.pass_id == passes[-1].id], np.asarray(matrix))
-                    passes[-1].to_input = to_input(rotation, _chain(matrix, origin))
-                    frames[passes[-1].id] = _chain(matrix, origin)
-                    view, skew_matrix = frame, matrix
-        inferred, rank = _classify(base, region)
+        self.view, self.skew_matrix = self.input_view, None
+        if not self.settings.deskew_retry:
+            return
+        self.skew = angle = skew_angle(self.base)
+        if abs(angle) < SKEW_MIN_CORRECTION:
+            return
+        frame, matrix = deskew(self.input_view, angle)
+        if self.mode == "accurate":
+            corrected = self.read(frame, self.rotation, "deskew", _chain(matrix, self.origin))
+            if self.screened:
+                corrected = self.card_text(corrected)
+            if (corrected and abs(skew_angle(corrected)) < abs(angle)
+                    and (self.origin is None or self.classify(corrected)[0] is not None)):
+                self.base, self.view, self.skew_matrix = corrected, frame, matrix
+        else:
+            # Fast mode has no read to spare. The recognised text of a tilted page
+            # is sound; its row geometry is not. The boxes are moved into the
+            # levelled frame instead, and the pass's to_input follows them.
+            _move([span for span in self.raw if span.pass_id == self.passes[-1].id], np.asarray(matrix))
+            self.passes[-1].to_input = self.to_input(self.rotation, _chain(matrix, self.origin))
+            self.frames[self.passes[-1].id] = _chain(matrix, self.origin)
+            self.view, self.skew_matrix = frame, matrix
+
+    def settle_kind(self) -> CardKind:
+        inferred, rank = self.classify(self.base)
         # Orientation probes run when classification fails, or when a KTP was requested and
         # the read does not look like one: a card turned by a quarter reads as scattered
         # digits, which can pass for a business card's phone numbers. Fast mode probes only
         # in that second case, where the alternative is an error response. Business
         # small-print retries are separate. A card view was kept only because it classified
         # as the requested kind, so it never needs one.
-        sideways = bool(base) and document_type == "ktp" and inferred != "ktp"
+        sideways = bool(self.base) and self.document_type == "ktp" and inferred != "ktp"
         misread = inferred is None or sideways
-        if misread and (mode == "accurate" or sideways) and origin is None:
-            alternatives = [(rank, inferred, base, view, rotation, skew_matrix)]
+        if misread and (self.mode == "accurate" or sideways) and self.origin is None:
+            alternatives: list[tuple[int, CardKind | None, list[Span], np.ndarray, int, np.ndarray | None]] = [
+                (rank, inferred, self.base, self.view, self.rotation, self.skew_matrix)]
             for extra in (90, 270):
-                alternative = rotate(input_view, extra)
+                alternative = rotate(self.input_view, extra)
                 matrix = None
-                if skew_matrix is not None:
-                    alternative, matrix = deskew(alternative, angle)
-                spans = read(alternative, rotation + extra, "orientation_probe", matrix)
-                kind, rating = _classify(spans, region)
-                alternatives.append((rating, kind, spans, alternative, (rotation + extra) % 360, matrix))
-            before = rotation
-            _, inferred, base, view, rotation, skew_matrix = max(alternatives, key=lambda item: item[0])
+                if self.skew_matrix is not None:
+                    alternative, matrix = deskew(alternative, self.skew)
+                spans = self.read(alternative, self.rotation + extra, "orientation_probe", matrix)
+                kind, rating = self.classify(spans)
+                alternatives.append((rating, kind, spans, alternative, (self.rotation + extra) % 360, matrix))
+            before = self.rotation
+            _, inferred, self.base, self.view, self.rotation, self.skew_matrix = max(
+                alternatives, key=lambda item: item[0])
             # A probe frame is the upload turned once more; its boxes are not screened.
-            screened = screened and rotation == before
-        if not base:
+            self.screened = self.screened and self.rotation == before
+        if not self.base:
             raise OCRProblem("NO_TEXT", "No readable text found. Retake the image without blur or glare.")
-        if document_type == "auto":
+        if self.document_type == "auto":
             if inferred is None:
                 raise OCRProblem(
                     "DOCUMENT_TYPE_UNCERTAIN", "Select KTP or business_card explicitly, or retake the image."
                 )
-            kind = inferred
-        else:
-            kind = document_type
-            if (kind == "ktp" and inferred != "ktp") or (kind == "business_card" and inferred == "ktp"):
-                raise OCRProblem(
-                    "DOCUMENT_TYPE_MISMATCH", "The image does not match the selected document type."
-                )
-        # Business cards are respaced too, but never a contact line: a gap around the "@"
-        # or a dot of an address is not a word break.
-        if self.settings.respace_words:
-            self._respace(view, base if kind == "ktp"
-                          else [span for span in base if not business.contact_text(span.text)])
-        selected_passes = [base]
-        screen = card_text if screened else (lambda spans: spans)
-        if mode == "accurate":
-            selected_passes.append(screen(read(enhance(view), rotation, "clahe", _chain(skew_matrix, origin))))
+            return inferred
+        if (self.document_type == "ktp" and inferred != "ktp") or (
+                self.document_type == "business_card" and inferred == "ktp"):
+            raise OCRProblem(
+                "DOCUMENT_TYPE_MISMATCH", "The image does not match the selected document type."
+            )
+        return self.document_type
+
+    def evidence_reads(self) -> list[list[Span]]:
+        """The settled read, and in accurate mode its contrast-enhanced and magnified re-reads."""
+        reads = [self.base]
+        screen = self.card_text if self.screened else (lambda spans: spans)
+        if self.mode == "accurate":
+            reads.append(screen(self.read(enhance(self.view), self.rotation, "clahe",
+                                          _chain(self.skew_matrix, self.origin))))
         # Small print is re-read from a magnified crop for either card type: detection at
         # a larger effective glyph size can separate lines the full-image pass merged,
         # and every retry read joins the same evidence pool as the full-image reads.
         heights = [(np.linalg.norm(np.asarray(s.box[3]) - s.box[0])
                     + np.linalg.norm(np.asarray(s.box[2]) - s.box[1])) / 2
-                   for s in base if len(s.text.strip()) >= 3 and s.score >= 0.7]
+                   for s in self.base if len(s.text.strip()) >= 3 and s.score >= 0.7]
         small_print = _small_print(heights, self.settings)
         if heights:
-            quality.text_height_px = round(median(heights), 1)
+            self.quality.text_height_px = round(median(heights), 1)
         if small_print:
-            quality.warnings.append("small_text")
-            if mode == "accurate" and self.settings.small_text_retry and self.settings.business_retry:
+            self.quality.warnings.append("small_text")
+            if self.mode == "accurate" and self.settings.small_text_retry and self.settings.business_retry:
                 for contrast in (False, True):
-                    focus = text_focus(view, base, self.settings, contrast=contrast)
+                    focus = text_focus(self.view, self.base, self.settings, contrast=contrast)
                     if focus is not None:
                         frame, forward = focus
-                        selected_passes.append(screen(read(frame, rotation,
+                        reads.append(screen(self.read(frame, self.rotation,
                             "text_focus_contrast" if contrast else "text_focus",
-                            _chain(forward, skew_matrix, origin))))
-        parsed_passes: list[Parsed] = [
-            ktp.parse(spans) if kind == "ktp"
-            else business.parse(spans, region, self.settings.shared_area_code)
-            for spans in selected_passes
-        ]
-        observations: dict[str, list[Observation]] = {}
-        for parsed in parsed_passes:
-            for key, items in parsed.fields.items():
-                observations.setdefault(key, []).extend(items)
-        fields: dict[str, FieldResult | list[FieldResult]] = {}
-        if kind == "ktp":
-            fields = _resolve_ktp(observations, mode, self.settings)
-            recover = {key for key in (*ktp.REQUIRED, "rt", "rw", "village", "district")
-                       if fields[key].status != "accepted"
-                       and fields[key].reasons != ["ambiguous_block_character"]}
-            if mode == "accurate" and self.settings.ktp_recovery and recover:
-                focus = text_focus(view, ktp.recovery_spans(base, recover), self.settings)
-                if focus is not None:
-                    frame, forward = focus
-                    for contrast in (False, True):
-                        retry_view = enhance(frame) if contrast else frame
-                        spans = read(retry_view, rotation,
-                                     "ktp_recovery_contrast" if contrast else "ktp_recovery",
-                                     _chain(forward, skew_matrix, origin))
-                        if self.settings.respace_words:
-                            self._respace(retry_view, spans)
-                        for key, items in ktp.parse(spans).fields.items():
-                            # Neighbouring rows are context and can be cut by the crop.
-                            # Only unresolved target fields receive retry observations;
-                            # e.g. a clipped header must not replace a complete one.
-                            if key in recover:
-                                height, width = retry_view.shape[:2]
-                                for item in items:
-                                    if any(runs_off(s.box, width, height) or s.y <= 1
-                                           or s.y + s.height >= height - 2
-                                           for s in item.value_spans or item.spans):
-                                        item.issues.append("recovery_text_touches_crop_edge")
-                                observations.setdefault(key, []).extend(items)
-                    fields = _resolve_ktp(observations, mode, self.settings)
-        else:
-            for key in business.SCALAR_FIELDS:
-                fields[key] = business.resolve_field(
-                    observations.get(key, []), self.settings.field_threshold, consensus=mode == "accurate",
-                    spacing_insensitive=True,
-                )
-            transforms = {p.id: p.to_input for p in passes}
-            for key in business.LIST_FIELDS:
-                fields[key] = business.resolve_contacts(
-                    observations.get(key, []), self.settings.field_threshold, mode == "accurate", transforms
-                )
-            if not any(observations.values()):
-                raise OCRProblem("NO_FIELDS", "Text was detected but no card fields could be extracted.")
+                            _chain(forward, self.skew_matrix, self.origin))))
+        return reads
 
-        review_reasons = [f"image:{issue}" for issue in quality.warnings]
-        severe_quality = any(w in quality.warnings for w in ("possible_blur", "low_contrast"))
-        data: dict[str, str | None | list[str]] = {}
-        for key, result in fields.items():
-            results = result if isinstance(result, list) else [result]
-            for field in results:
-                if severe_quality:
-                    flag(field, "image_quality_requires_review")
-                if field.status == "review":
-                    review_reasons.append(f"{key}:" + ",".join(field.reasons))
-            data[key] = (
-                [f.value for f in results if f.value is not None]
-                if isinstance(result, list)
-                else result.value
+    def ktp_fields(self, observations: dict[str, list[Observation]]) -> dict[str, FieldResult]:
+        fields = _resolve_ktp(observations, self.mode, self.settings)
+        recover = {key for key in (*ktp.REQUIRED, "rt", "rw", "village", "district")
+                   if fields[key].status != "accepted"
+                   and fields[key].reasons != ["ambiguous_block_character"]}
+        if not (self.mode == "accurate" and self.settings.ktp_recovery and recover):
+            return fields
+        focus = text_focus(self.view, ktp.recovery_spans(self.base, recover), self.settings)
+        if focus is None:
+            return fields
+        frame, forward = focus
+        for contrast in (False, True):
+            retry_view = enhance(frame) if contrast else frame
+            spans = self.read(retry_view, self.rotation,
+                              "ktp_recovery_contrast" if contrast else "ktp_recovery",
+                              _chain(forward, self.skew_matrix, self.origin))
+            if self.settings.respace_words:
+                self.pipeline._respace(retry_view, spans)
+            for key, items in ktp.parse(spans).fields.items():
+                # Neighbouring rows are context and can be cut by the crop.
+                # Only unresolved target fields receive retry observations;
+                # e.g. a clipped header must not replace a complete one.
+                if key in recover:
+                    height, width = retry_view.shape[:2]
+                    for item in items:
+                        if any(runs_off(s.box, width, height) or s.y <= 1
+                               or s.y + s.height >= height - 2
+                               for s in item.value_spans or item.spans):
+                            item.issues.append("recovery_text_touches_crop_edge")
+                    observations.setdefault(key, []).extend(items)
+        return _resolve_ktp(observations, self.mode, self.settings)
+
+    def business_fields(self, observations: dict[str, list[Observation]]) -> dict[str, FieldResult | list[FieldResult]]:
+        fields: dict[str, FieldResult | list[FieldResult]] = {}
+        for key in business.SCALAR_FIELDS:
+            fields[key] = business.resolve_field(
+                observations.get(key, []), self.settings.field_threshold, consensus=self.mode == "accurate",
+                spacing_insensitive=True,
             )
-        required = ktp.REQUIRED if kind == "ktp" else ("full_name", "company")
-        for key in required:
-            if fields[key].status == "missing":
-                review_reasons.append(f"{key}:not_found")
-        if kind == "business_card":
-            # The accepted numbers that are mobile lines, for a form's "mobile phone" field.
-            data["mobile_phones"] = [field.value for field in fields["phones"]
-                                     if field.value is not None and field.phone_type == "mobile"]
-        if kind == "business_card" and not any(data[k] for k in ("emails", "phones", "websites")):
-            review_reasons.append("no_accepted_contact")
-        if mode == "fast":
-            review_reasons.append("fast_mode_single_read")
-        needs_review = bool(review_reasons)
-        return OCRResponse(
-            request_id=str(uuid4()),
-            document_type=kind,
-            status="needs_review" if needs_review else "ok",
-            needs_review=needs_review,
-            data=data,
-            fields=fields,
-            review_reasons=sorted(set(review_reasons)),
-            quality=quality,
-            processing=Processing(
-                mode=mode,
-                elapsed_ms=round((perf_counter() - started) * 1000, 2),
-                engine=self.engine.name,
-                models=self.engine.models,
-                model_hashes=self.engine.hashes,
-                passes=passes,
-                phone_region=region if kind == "business_card" else None,
-            ),
-            raw_ocr=raw if include_raw else None,
-        )
+        transforms = {p.id: p.to_input for p in self.passes}
+        for key in business.LIST_FIELDS:
+            fields[key] = business.resolve_contacts(
+                observations.get(key, []), self.settings.field_threshold, self.mode == "accurate", transforms
+            )
+        if not any(observations.values()):
+            raise OCRProblem("NO_FIELDS", "Text was detected but no card fields could be extracted.")
+        return fields
